@@ -1,0 +1,9 @@
+#!/bin/sh
+cd $(git rev-parse --show-toplevel)
+git submodule update
+mkdir -p build
+cd build
+cmake ..
+make
+cd -
+

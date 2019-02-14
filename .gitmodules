@@ -1,0 +1,9 @@
+[submodule "clibs"]
+	path = clibs
+	url = https://github.com/ennorehling/clibs
+[submodule "crpat"]
+	path = crpat
+	url = https://github.com/ennorehling/crpat
+[submodule "cJSON"]
+	path = cJSON
+	url = https://github.com/ennorehling/cJSON.git
