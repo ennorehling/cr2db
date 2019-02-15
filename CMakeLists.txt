@@ -7,7 +7,7 @@ add_subdirectory (crpat)
 
 find_package(SQLite3 REQUIRED)
 
-add_executable (cr2db cr2db.c parser.c)
+add_executable (cr2db cr2db.c crdb.c)
 if(SQLITE3_FOUND)
 target_include_directories (cr2db PRIVATE ${SQLITE3_INCLUDE_DIR})
 target_link_libraries(cr2db ${SQLITE3_LIBRARIES} crpat)

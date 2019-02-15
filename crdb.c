@@ -1,4 +1,4 @@
-#include "parser.h"
+#include "crdb.h"
 #include "crpat/crpat.h"
 
 #include <errno.h>
@@ -27,7 +27,14 @@ static void handle_number(void *udata, const char *name, long value) {
 static void handle_text(void *udata, const char *text) {
 }
 
-int parse_report(const char *filename) {
+crdb_t *crdb_open(const char *filename) {
+    return NULL;
+}
+
+void crdb_close(crdb_t *crdb) {
+}
+
+int crdb_import(crdb_t *crdb, const char *filename) {
     CR_Parser cp;
     int done = 0;
     char buf[2048], *input;
