@@ -53,6 +53,20 @@ static void handle_element(void *udata, const char *name, unsigned int keyc, int
     if (p->root) {
         fprintf(stderr, "unknown element type %s\n", name);
         p->block = NULL;
+        if (strcmp("PARTEI", name) == 0) {
+            cJSON *parent = p->root;
+            cJSON *block = cJSON_CreateObject();
+            cJSON *arr = cJSON_GetObjectItem(parent, name);
+            if (!arr) {
+                arr = cJSON_CreateArray();
+                cJSON_AddItemToObject(parent, name, arr);
+            }
+            cJSON_AddItemToArray(arr, block);
+            if (keyc > 0) {
+               cJSON_AddNumberToObject(block, "uid", keyv[0]);
+            }
+            p->block = block;
+        }
     } else {
         if (strcmp("VERSION", name) != 0) {
             fprintf(stderr, "expecting first element to be VERSION, got %s\n", name);
