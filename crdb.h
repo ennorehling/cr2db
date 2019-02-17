@@ -1,10 +1,12 @@
 #pragma once
 
+struct cJSON;
+
 typedef struct crdb_t {
-    void *impl;
+    struct cJSON *json;
 } crdb_t;
 
-struct crdb_t *crdb_open(const char *dbname);
-void crdb_close(struct crdb_t *crdb);
+void crdb_init(struct crdb_t *crdb);
+void crdb_free(struct crdb_t *crdb);
 int crdb_import(struct crdb_t *crdb, const char *crname);
 

@@ -1,11 +1,18 @@
 #include "crdb.h"
 
-int main(int argc, char **argv) {
-    crdb_t *data;
+#include "cJSON/cJSON.h"
 
-    data = crdb_open("test.db");
-    crdb_import(data, "test.cr");
-    crdb_close(data);
+#include <stdio.h>
+
+int main(int argc, char **argv) {
+    crdb_t data;
+
+    crdb_init(&data);
+    if (0 == crdb_import(&data, "test.cr")) {
+        char *dump = cJSON_Print(data.json);
+        puts(dump);
+        cJSON_free(dump);
+    }
+    crdb_free(&data);
     return 0;
 }
-
