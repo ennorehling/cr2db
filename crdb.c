@@ -15,31 +15,6 @@
 #define gettext(msgid) (msgid)
 #endif
 
-typedef enum blocktype_t {
-    BLOCK_OBJECT,
-    BLOCK_STRINGS,
-} blocktype_t;
-
-#define MAXPARENTS 3
-static const struct {
-    const char *name;
-    blocktype_t type;
-} blocktypes[] = {
-    { "COMMANDS", BLOCK_STRINGS },
-    { "SPRUECHE", BLOCK_STRINGS },
-    { NULL,  BLOCK_OBJECT }
-};
-
-static blocktype_t element_type(const char *name) {
-    int i;
-    for (i = 0; blocktypes[i].name != NULL; ++i) {
-        if (0 == strcmp(name, blocktypes[i].name)) {
-            return blocktypes[i].type;
-        }
-    }
-    return BLOCK_OBJECT;
-}
-
 #define STACKSIZE 4
 
 typedef struct parser_t {
