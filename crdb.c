@@ -49,6 +49,20 @@ typedef struct parser_t {
     int sp;
 } parser_t;
 
+static const char * seq_blocks[] = {
+    "KAMPFZAUBER", "GRENZE", NULL
+};
+
+static bool is_sequence(const char *name) {
+    int i;
+    for (i = 0; seq_blocks[i]; ++i) {
+        if (strcmp(name, seq_blocks[i]) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static const char * top_blocks[] = {
     "PARTEI", "BATTLE", "REGION", "MESSAGETYPE", "TRANSLATION", NULL
 };
@@ -106,6 +120,7 @@ static void handle_element(void *udata, const char *name, unsigned int keyc, int
     }
     else if (keyc > 0) {
         int depth = block_depth(name);
+        bool sequence = is_sequence(name);
         cJSON *parent;
         cJSON *block = cJSON_CreateObject();
         if (depth < 0) {
@@ -130,8 +145,9 @@ static void handle_element(void *udata, const char *name, unsigned int keyc, int
         }
         p->block = block;
         if (keyc == 1) {
-            // TODO: KAMPFZAUBER, GRENZE as sequences
-            cJSON_AddNumberToObject(block, "id", keyv[0]);
+            if (!sequence) {
+                cJSON_AddNumberToObject(block, "id", keyv[0]);
+            }
         } else if (keyc >= 2) {
             cJSON_AddNumberToObject(block, "x", keyv[0]);
             cJSON_AddNumberToObject(block, "y", keyv[1]);
