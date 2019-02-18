@@ -3,6 +3,7 @@
 
 #include "cJSON/cJSON.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -39,100 +40,58 @@ static blocktype_t element_type(const char *name) {
     return BLOCK_OBJECT;
 }
 
-#define STACKSIZE 6
+#define STACKSIZE 4
 
 typedef struct parser_t {
     CR_Parser parser;
-    cJSON *root, *block, *object, *region;
+    cJSON *root, *block;
+    cJSON *stack[STACKSIZE];
     int sp;
 } parser_t;
 
 static const char * top_blocks[] = {
-    "PARTEI", "MESSAGETYPE", "BATTLE", "TRANSLATION", NULL
+    "PARTEI", "BATTLE", "REGION", "MESSAGETYPE", "TRANSLATION", NULL
 };
 
-typedef enum blocktype_e {
-    TYPE_REGION,
-    TYPE_TOPLEVEL,
-    TYPE_OBJECT,
-} blocktype_e;
+static const char * sub_blocks[] = {
+    "MESSAGE", "GRUPPE", "SCHIFF", "BURG", "EINHEIT", "GRENZE", NULL
+};
 
-static blocktype_e block_type(const char *name) {
+static int block_depth(const char *name) {
     int i;
-    if (strcmp("REGION", name) == 0) {
-        return TYPE_REGION;
-    }
     for (i = 0; top_blocks[i]; ++i) {
         if (strcmp(name, top_blocks[i]) == 0) {
-            return TYPE_TOPLEVEL;
+            return 1;
         }
     }
-    return TYPE_OBJECT;
+    for (i = 0; sub_blocks[i]; ++i) {
+        if (strcmp(name, sub_blocks[i]) == 0) {
+            return 2;
+        }
+    }
+    return -1;
 }
 
 static void handle_element(void *udata, const char *name, unsigned int keyc, int keyv[]) {
     parser_t *p = (parser_t *)udata;
     cJSON *arr = NULL;
     if (p->root == NULL) {
-        if (strcmp("VERSION", name) != 0) {
-            fprintf(stderr, gettext("expecting first element to be VERSION, got %s\n"), name);
-        }
-        else {
+        if (strcmp("VERSION", name) == 0) {
             cJSON *block;
             int version = (keyc > 0) ? keyv[0] : 0;
             if (version != 66) {
                 fprintf(stderr, gettext("unknown version %d\n"), version);
             }
             block = cJSON_CreateObject();
-            p->root = p->block = block;
-            p->object = NULL;
-        }
-    }
-    else if (keyc > 0) {
-        cJSON *parent = p->object;
-        cJSON *block = cJSON_CreateObject();
-        switch (block_type(name)) {
-        case TYPE_REGION:
-            parent = p->root;
-            p->object = p->region = block;
-            if (keyc >= 2) {
-                cJSON_AddNumberToObject(block, "x", keyv[0]);
-                cJSON_AddNumberToObject(block, "y", keyv[1]);
-            }
-            if (keyc > 2) {
-                cJSON_AddNumberToObject(block, "z", keyv[2]);
-            }
-            break;
-        case TYPE_TOPLEVEL:
-            parent = p->root;
-            p->region = NULL;
-            cJSON_AddNumberToObject(block, "id", keyv[0]);
-            break;
-        default:
-            cJSON_AddNumberToObject(block, "id", keyv[0]);
-        }
-        if (!parent) {
-            if (keyc == 1) {
-                fprintf(stderr, gettext("invalid object hierarchy at %s %d\n"), name, keyv[0]);
-            }
-            else if (keyc == 2) {
-                fprintf(stderr, gettext("invalid object hierarchy at %s %d %d\n"), name, keyv[0], keyv[1]);
-            }
-            else if (keyc > 2) {
-                fprintf(stderr, gettext("invalid object hierarchy at %s %d %d %d\n"), name, keyv[0], keyv[1], keyv[2]);
-            }
+            p->stack[0] = p->root = p->block = block;
+            p->sp = 0;
         }
         else {
-            arr = cJSON_GetObjectItem(parent, name);
-            if (!arr) {
-                arr = cJSON_CreateArray();
-                cJSON_AddItemToObject(parent, name, arr);
-            }
+            fprintf(stderr, gettext("expecting first element to be VERSION, got %s\n"), name);
         }
-        p->object = p->block = block;
     }
     else if (keyc == 0) {
-        cJSON *parent = p->object;
+        cJSON *parent = p->stack[p->sp];
         cJSON *block = cJSON_CreateObject();
         p->block = block;
         if (strcmp("TRANSLATION", name) == 0) {
@@ -143,6 +102,47 @@ static void handle_element(void *udata, const char *name, unsigned int keyc, int
         }
         else {
             fprintf(stderr, gettext("invalid object hierarchy at %s\n"), name);
+        }
+    }
+    else if (keyc > 0) {
+        int depth = block_depth(name);
+        cJSON *parent;
+        cJSON *block = cJSON_CreateObject();
+        if (depth < 0) {
+            // TODO: error handling (i.e. VERSION -> MESSAGE)
+            if (p->sp >= 0 && p->sp < STACKSIZE) {
+                parent = p->stack[p->sp];
+            }
+            else {
+                fprintf(stderr, gettext("invalid object hierarchy at %s\n"), name);
+            }
+        }
+        else {
+            if (depth == 0 || depth > p->sp + 1) {
+                fprintf(stderr, gettext("invalid object hierarchy at %s\n"), name);
+            }
+            else {
+                parent = p->stack[depth - 1];
+                // Make this object top of stack, it may have sub-blocks:
+                p->sp = depth;
+                p->stack[p->sp] = block;
+            }
+        }
+        p->block = block;
+        if (keyc == 1) {
+            // TODO: KAMPFZAUBER, GRENZE as sequences
+            cJSON_AddNumberToObject(block, "id", keyv[0]);
+        } else if (keyc >= 2) {
+            cJSON_AddNumberToObject(block, "x", keyv[0]);
+            cJSON_AddNumberToObject(block, "y", keyv[1]);
+            if (keyc > 2) {
+                cJSON_AddNumberToObject(block, "z", keyv[2]);
+            }
+        }
+        arr = cJSON_GetObjectItem(parent, name);
+        if (!arr) {
+            arr = cJSON_CreateArray();
+            cJSON_AddItemToObject(parent, name, arr);
         }
     }
     else {
