@@ -1,0 +1,13 @@
+sudo: false
+language: c
+compiler:
+  - gcc
+  - clang
+script: s/travis-build
+addons:
+  apt:
+    packages:
+      - cppcheck
+      - valgrind
+os:
+  - linux

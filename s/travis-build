@@ -1,0 +1,6 @@
+#!/bin/sh
+
+cppcheck .
+s/build
+valgrind build/cr2json test.cr > /dev/null
+

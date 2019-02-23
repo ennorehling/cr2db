@@ -4,6 +4,7 @@
 
 #include "cJSON/cJSON.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -19,7 +20,7 @@ int main(int argc, char **argv) {
             int err = errno;
             errno = 0;
             log_error(NULL, gettext("could not open %s: %s\n"), filename, strerror(err));
-            return NULL;
+            return err;
         }
     }
 
