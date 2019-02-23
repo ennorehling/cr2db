@@ -1,4 +1,5 @@
 #include "crdb.h"
+#include "gettext.h"
 #include "crpat/crpat.h"
 
 #include "cJSON/cJSON.h"
@@ -9,11 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#ifndef HAVE_GETTEXT
-#define ngettext(msgid1, msgid2, n) ((n==1) ? (msgid1) : (msgid2))
-#define gettext(msgid) (msgid)
-#endif
 
 #define STACKSIZE 4
 
@@ -73,7 +69,7 @@ static cJSON *block_create(parser_t * p, const char *name) {
                 block = cJSON_CreateObject();
             }
             if (depth > p->sp + 1) {
-                fprintf(stderr, gettext("invalid object hierarchy at %s\n"), block_name(name, 0, NULL));
+                log_error(NULL, gettext("invalid object hierarchy at %s\n"), block_name(name, 0, NULL));
                 parent = NULL;
             }
             else {
@@ -238,30 +234,13 @@ static void handle_text(void *udata, const char *text) {
     }
 }
 
-void crdb_free(crdb_t *crdb) {
-    cJSON_Delete(crdb->json);
-}
-
-void crdb_init(struct crdb_t *crdb) { 
-    memset(crdb, 0, sizeof(crdb));
-}
-
-int crdb_import(crdb_t *crdb, const char *filename) {
+cJSON *crfile_read(FILE *in, const char *filename) {
     CR_Parser cp;
     int done = 0;
     char buf[2048], *input;
     parser_t state;
     size_t len;
-    FILE *in;
 
-    in = fopen(filename, "r");
-    if (in == NULL) {
-        int err = errno;
-        errno = 0;
-        fprintf(stderr, gettext("could not open %s: %s\n"),
-            filename, strerror(err));
-        return err;
-    }
     cp = CR_ParserCreate();
     CR_SetElementHandler(cp, handle_element);
     CR_SetPropertyHandler(cp, handle_string);
@@ -270,6 +249,7 @@ int crdb_import(crdb_t *crdb, const char *filename) {
 
     memset(&state, 0, sizeof(state));
     state.parser = cp;
+    state.root = NULL;
     CR_SetUserData(cp, (void *)&state);
 
     input = buf;
@@ -284,24 +264,26 @@ int crdb_import(crdb_t *crdb, const char *filename) {
         if (ferror(in)) {
             int err = errno;
             errno = 0;
-            fprintf(stderr, gettext("read error at line %d of %s: %s\n"),
+            log_error(NULL, gettext("read error at line %d of %s: %s\n"),
                 CR_GetCurrentLineNumber(cp), filename, strerror(err));
-            return err;
+            cJSON_Delete(state.root);
+            state.root = NULL;
+            break;
         }
         done = feof(in);
         if (CR_Parse(cp, input, len, done) == CR_STATUS_ERROR) {
-            fprintf(stderr, gettext("parse error at line %d of %s: %s\n"),
+            log_error(NULL, gettext("parse error at line %d of %s: %s\n"),
                 CR_GetCurrentLineNumber(cp), filename,
                 CR_ErrorString(CR_GetErrorCode(cp)));
-            return -1;
+            cJSON_Delete(state.root);
+            state.root = NULL;
+            break;
         }
         len = fread(buf, 1, sizeof(buf), in);
         input = buf;
     }
     CR_ParserFree(cp);
-    fclose(in);
 
-    crdb->json = state.root;
-    return 0;
+    return state.root;
 }
 

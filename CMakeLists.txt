@@ -8,7 +8,7 @@ add_subdirectory (cJSON)
 
 # find_package(SQLite3 REQUIRED)
 
-add_executable (cr2db cr2db.c crdb.c)
+add_executable (cr2db cr2db.c crdb.c log.c)
 target_include_directories (cr2db PRIVATE
 ${CJSON_INCLUDE_DIR}
 ${CRPAT_INCLUDE_DIR}

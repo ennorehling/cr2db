@@ -1,12 +1,8 @@
 #pragma once
 
+#include <stdio.h>
+
 struct cJSON;
 
-typedef struct crdb_t {
-    struct cJSON *json;
-} crdb_t;
-
-void crdb_init(struct crdb_t *crdb);
-void crdb_free(struct crdb_t *crdb);
-int crdb_import(struct crdb_t *crdb, const char *crname);
+struct cJSON *crfile_read(FILE * F, const char *crname);
 
