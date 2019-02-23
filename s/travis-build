@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cppcheck .
+cppcheck --quiet -I. --error-exitcode=1 .
 s/build
 valgrind build/cr2json test.cr > /dev/null
 
