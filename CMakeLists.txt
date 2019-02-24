@@ -6,7 +6,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 add_subdirectory (crpat)
 add_subdirectory (cJSON)
 
-# find_package(SQLite3 OPTIONAL)
+find_package(Fcgi)
+find_package(SQLite3)
 
 add_executable (cr2json cr2json.c crfile.c log.c)
 target_include_directories (cr2json PRIVATE
