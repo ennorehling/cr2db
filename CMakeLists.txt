@@ -9,6 +9,12 @@ add_subdirectory (cJSON)
 find_package(Fcgi)
 find_package(SQLite3)
 
+if (FCGI_FOUND)
+add_executable (hellocgi hellocgi.c)
+target_link_libraries (hellocgi ${FCGI_LIBRARIES})
+target_include_directories (hellocgi PRIVATE ${FCGI_INCLUDE_DIR})
+endif (FCGI_FOUND)
+
 add_executable (cr2json cr2json.c crfile.c log.c)
 target_include_directories (cr2json PRIVATE
 ${CJSON_INCLUDE_DIR}
