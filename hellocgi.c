@@ -1,13 +1,16 @@
 #include <fcgiapp.h>
+#include <stdio.h>
 
-int main(int argc, char **argv) {
+int main(void) {
+    int err, i = 0;
     FCGX_Request req;
-    FCGX_Init();
-    FCGX_InitRequest(&req, 0, 0);
-    while(FCGX_Accept_r(&req) == 1) {
+    err = FCGX_Init();
+    err = FCGX_InitRequest(&req, 0, 0);
+    while((err = FCGX_Accept_r(&req)) >= 0) {
         FCGX_PutS("Content-Type: text/plain\r\n\r\n", req.out);
-        FCGX_PutS("Hello World\n", req.out);
+        FCGX_FPrintF(req.out, "Hello World, request #%d\n", ++i);
     }
 
+    fprintf(stderr, "hellocgi done with err=%d\n", err);
     return 0;
 }

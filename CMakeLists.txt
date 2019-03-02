@@ -13,6 +13,7 @@ if (FCGI_FOUND)
 add_executable (hellocgi hellocgi.c)
 target_link_libraries (hellocgi ${FCGI_LIBRARIES})
 target_include_directories (hellocgi PRIVATE ${FCGI_INCLUDE_DIR})
+set_target_properties (hellocgi PROPERTIES COMPILE_FLAGS "-Wall -Wextra")
 endif (FCGI_FOUND)
 
 add_executable (cr2json cr2json.c crfile.c log.c)
@@ -32,5 +33,6 @@ ${CRPAT_LIBRARIES}
 
 if(MSVC)
 set_target_properties (cr2json PROPERTIES COMPILE_DEFINITIONS _CRT_SECURE_NO_WARNINGS)
-set_target_properties (cr2json PROPERTIES COMPILE_FLAGS /W3 /WX /MP)
+set_target_properties (cr2json PROPERTIES COMPILE_FLAGS "/W3 /WX /MP")
 endif(MSVC)
+
