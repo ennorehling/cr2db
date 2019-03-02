@@ -14,7 +14,10 @@ add_executable (hellocgi hellocgi.c)
 target_link_libraries (hellocgi ${FCGI_LIBRARIES})
 target_include_directories (hellocgi PRIVATE ${FCGI_INCLUDE_DIR})
 set_target_properties (hellocgi PROPERTIES COMPILE_FLAGS "-Wall -Wextra")
+
 endif (FCGI_FOUND)
+
+add_executable (crservice crdata.c crfile.c log.c)
 
 add_executable (cr2json cr2json.c crfile.c log.c)
 target_include_directories (cr2json PRIVATE
