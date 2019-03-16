@@ -2,9 +2,8 @@
 #include "gettext.h"
 #include "log.h"
 
-#include "crpat/crpat.h"
-
-#include "cJSON/cJSON.h"
+#include <crpat.h>
+#include <cJSON.h>
 
 #include <assert.h>
 #include <errno.h>

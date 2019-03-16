@@ -13,11 +13,23 @@ if (FCGI_FOUND)
 add_executable (hellocgi hellocgi.c)
 target_link_libraries (hellocgi ${FCGI_LIBRARIES})
 target_include_directories (hellocgi PRIVATE ${FCGI_INCLUDE_DIR})
-set_target_properties (hellocgi PROPERTIES COMPILE_FLAGS "-Wall -Wextra")
-
+set_target_properties (hellocgi PROPERTIES COMPILE_FLAGS "-Wall -Wextra -Wno-return-local-addr")
 endif (FCGI_FOUND)
 
-add_executable (crservice crdata.c crfile.c log.c)
+add_executable (crservice crservice.c crdata.c crfile.c log.c)
+target_include_directories (crservice PRIVATE
+	${CJSON_INCLUDE_DIR}
+	${CRPAT_INCLUDE_DIR}
+)
+target_link_libraries(crservice
+	${CJSON_LIBRARIES}
+	${CRPAT_LIBRARIES}
+)
+if (FCGI_FOUND)
+target_link_libraries (crservice ${FCGI_LIBRARIES})
+target_include_directories (crservice PRIVATE ${FCGI_INCLUDE_DIR})
+target_compile_definitions (crservice PRIVATE HAVE_FCGI=1)
+endif (FCGI_FOUND)
 
 add_executable (cr2json cr2json.c crfile.c log.c)
 target_include_directories (cr2json PRIVATE

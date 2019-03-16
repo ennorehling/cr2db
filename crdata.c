@@ -4,7 +4,7 @@
 
 #include "crfile.h"
 
-#include "cJSON/cJSON.h"
+#include <cJSON.h>
 
 #include <assert.h>
 #include <stdlib.h>
@@ -50,7 +50,8 @@ crdata *crdata_get(int no) {
         cJSON *data;
         char buffer[16];
 
-        snprintf(buffer, "%d-%s.cr", cr_turn, int_to_id(no));
+        snprintf(buffer, sizeof(buffer), "%d-%s.cr",
+            cr_turn, int_to_id(no));
         F = fopen(buffer, "rt");
         if (!F) {
             return NULL;
@@ -130,7 +131,7 @@ static struct cJSON * crdata_get_region_child(struct crdata *cr, const char *typ
     }
     arr = cJSON_GetObjectItem(region, "REGION");
     for (child = arr->child; child; child = child->next) {
-        cJSON *unit = crdata_get_unit(arr, no, child);
+        cJSON *unit = crdata_get_region_child(cr, type, no, child);
         if (unit) {
             return unit;
         }
