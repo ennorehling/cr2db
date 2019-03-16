@@ -25,6 +25,53 @@ typedef struct crdata {
 static crdata * cr_reports[CRHASHSIZE];
 static int cr_turn;
 
+const char *itoab_r(int value, char *buffer, int radix, size_t len)
+{
+    char *dst;
+
+    assert(len > 2);
+    dst = buffer + len - 2;
+    dst[1] = 0;
+    if (value != 0) {
+        int neg = 0;
+
+        if (value < 0) {
+            value = -value;
+            neg = 1;
+        }
+        while (value && dst >= buffer) {
+            int x = value % radix;
+            value = value / radix;
+            if (x < 10) {
+                *(dst--) = (char)('0' + x);
+            }
+            else if ('a' + x - 10 == 'l') {
+                *(dst--) = 'L';
+            }
+            else {
+                *(dst--) = (char)('a' + (x - 10));
+            }
+        }
+        if (dst > buffer) {
+            if (neg) {
+                *(dst) = '-';
+            }
+            else {
+                ++dst;
+            }
+        }
+        else {
+            log_error(NULL, "static buffer exhausted, itoab(%d, %d)", value, radix);
+            assert(value == 0 || !"itoab: static buffer exhausted");
+        }
+    }
+    else {
+        dst[0] = '0';
+    }
+
+    return dst;
+}
+
 char *itoa_base(int value, char * buffer, int radix) {
     assert(radix <= 36 && radix >= 10);
     assert(buffer);
@@ -38,12 +85,17 @@ char *itoa_base(int value, char * buffer, int radix) {
 
 char *int_to_id(int no) {
     static char sbuf[12];
+    char *s;
     int i;
-    itoa_base(no, sbuf, 36);
-    for (i = 0; sbuf[i]; ++i) {
-        if (sbuf[i] == 'l') sbuf[i] = 'L';
+#ifdef _MSC_VER
+    s = _itoa(no, sbuf, 36);
+#else
+    s = itoab_r(no, sbuf, 36, sizeof(sbuf));
+#endif
+    for (i = 0; s[i]; ++i) {
+        if (s[i] == 'l') s[i] = 'L';
     }
-    return sbuf;
+    return s;
 }
 
 crdata *crdata_get(int no) {
