@@ -1,3 +1,7 @@
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "crdata.h"
 #include "log.h"
 #include "crdata.h"
@@ -25,12 +29,15 @@ char *itoa_base(int value, char * buffer, int radix) {
     assert(radix <= 36 && radix >= 10);
     assert(buffer);
 #ifdef _MSC_VER
-    return itoa(value, buffer, radix);
+    return _itoa(value, buffer, radix);
+#else
+    assert(!"not implemented");
+    return buffer;
 #endif
 }
 
 char *int_to_id(int no) {
-    char sbuf[12];
+    static char sbuf[12];
     int i;
     itoa_base(no, sbuf, 36);
     for (i = 0; sbuf[i]; ++i) {
@@ -74,7 +81,7 @@ static cJSON *crdata_get_child_id(cJSON *arr, int no) {
         for (child = arr->child; child; child = child->next) {
             cJSON *item;
             assert(child->type == cJSON_Object);
-            item = cJSON_GetObjectItem(item, "id");
+            item = cJSON_GetObjectItem(child, "id");
             if (item && item->valueint == no) {
                 return child;
             }
@@ -101,7 +108,6 @@ struct cJSON * crdata_get_region_at(struct crdata *cr, int x, int y, int z) {
     assert(arr->type == cJSON_Array);
     for (child = arr->child; child; child = child->next) {
         cJSON *item;
-        int rx, ry, rz;
         assert(child->type == cJSON_Object);
         if (z != 0) {
             item = cJSON_GetObjectItem(item, "z");
