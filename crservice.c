@@ -1,9 +1,11 @@
 #include "crdata.h"
 
-#include <fcgiapp.h>
 #include <stdio.h>
 
-int main(void) {
+#ifdef HAVE_FCGI
+#include <fcgiapp.h>
+
+int fcgimain(void) {
     int err, i = 0;
     FCGX_Request req;
     err = FCGX_Init();
@@ -12,7 +14,16 @@ int main(void) {
         FCGX_PutS("Content-Type: text/plain\r\n\r\n", req.out);
         FCGX_FPrintF(req.out, "Hello World, request #%d\n", ++i);
     }
-
-    fprintf(stderr, "hellocgi done with err=%d\n", err);
     return 0;
+}
+#endif
+
+int main(void) {
+    int err = 0;
+#ifdef HAVE_FCGI
+    fprintf(stderr, "crservice started.\n");
+    err = fcgimain();
+#endif
+    fprintf(stderr, "crservice done.\n");
+    return err;
 }
