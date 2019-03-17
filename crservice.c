@@ -17,7 +17,7 @@ typedef struct ostream {
     void *udata;
 } ostream;
 
-static int handle_request(const char **env, ostream *stream) {
+static int handle_request(char **env, ostream *stream) {
     int e;
     const char *headers = "Content-Type: text/plain\r\n\r\n";
     char hello[64];
