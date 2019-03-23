@@ -27,7 +27,7 @@ typedef struct crdata {
 static crdata * cr_reports[CRHASHSIZE];
 static int cr_turn;
 
-const char *itoab_r(int value, char *buffer, int radix, size_t len)
+char *itoab_r(int value, char *buffer, int radix, size_t len)
 {
     char *dst;
 
@@ -72,17 +72,6 @@ const char *itoab_r(int value, char *buffer, int radix, size_t len)
     }
 
     return dst;
-}
-
-char *itoa_base(int value, char * buffer, int radix) {
-    assert(radix <= 36 && radix >= 10);
-    assert(buffer);
-#ifdef _MSC_VER
-    return _itoa(value, buffer, radix);
-#else
-    assert(!"not implemented");
-    return buffer;
-#endif
 }
 
 char *int_to_id(int no) {
