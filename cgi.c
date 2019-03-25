@@ -32,7 +32,7 @@ void route_get(const char *pattern, route_handler handler) {
         char *var = NULL, *frag = NULL;
         const char *pos = strchr(tail, ':');
         if (pos != tail) {
-            size_t len = pos ? (pos - tail) : strlen(tail);
+            size_t len = pos ? (size_t)(pos - tail) : strlen(tail);
             frag = malloc(len + 1);
             memcpy(frag, tail, len);
             frag[len] = 0;
@@ -43,7 +43,7 @@ void route_get(const char *pattern, route_handler handler) {
             size_t len;
             pos = strchr(tail, '/');
             /* fragment is followed by a variable: */
-            len = pos ? (pos - tail) : strlen(tail);
+            len = pos ? (size_t)(pos - tail) : strlen(tail);
             var = malloc(len + 1);
             memcpy(var, tail, len);
             var[len] = 0;
@@ -119,7 +119,7 @@ int route_handle(request_t *req, ostream *stream) {
                 }
                 if (var != NULL) {
                     const char * end = strchr(tail, '/');
-                    size_t len = end ? (end - tail) : strlen(tail);
+                    size_t len = end ? (size_t)(end - tail) : strlen(tail);
                     size_t varlen = strlen(var);
                     char *value = malloc(varlen + len + 2);
                     memcpy(value, var, varlen);
@@ -150,37 +150,6 @@ int route_handle(request_t *req, ostream *stream) {
         return res;
     }
     return -1;
-}
-
-static int hello_name_handler(request_t *req, ostream *stream) {
-    const char *headers = "Content-Type: text/plain\nStatus: 200 OK\n\n";
-    const char *name;
-
-    stream->write(stream->udata, headers, strlen(headers));
-    name = req_getvar(req, "name");
-    if (name) {
-        char hello[64];
-        snprintf(hello, sizeof(hello), "Hello %s\n", name);
-        stream->write(stream->udata, hello, strlen(hello));
-    }
-    return 0;
-}
-
-static int hello_handler(request_t *req, ostream *stream) {
-    static int reqno;
-    int e;
-    const char *headers = "Content-Type: text/plain\nStatus: 200 OK\n\n";
-    char hello[64];
-
-    stream->write(stream->udata, headers, strlen(headers));
-    snprintf(hello, sizeof(hello), "Hello World, request #%d\n", ++reqno);
-    stream->write(stream->udata, hello, strlen(hello));
-    for (e = 0; req->env[e]; ++e) {
-        const char *s = req->env[e];
-        stream->write(stream->udata, s, strlen(s));
-        stream->write(stream->udata, "\n", 1);
-    }
-    return 0;
 }
 
 static int handle_request(char **env, ostream *stream) {
