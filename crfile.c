@@ -142,7 +142,7 @@ static void handle_object(parser_t *p, const char *name, unsigned int keyc, int 
         if (strcmp("VERSION", name) == 0) {
             cJSON *block;
             int version = (keyc > 0) ? keyv[0] : 0;
-            if (version != 66) {
+            if (version < 66) {
                 fprintf(stderr, gettext("unknown version %d\n"), version);
             }
             block = cJSON_CreateObject();

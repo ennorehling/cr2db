@@ -12,7 +12,7 @@
 
 int main(int argc, char **argv) {
     cJSON *json;
-    const char * filename;
+    const char * filename = "stdin";
     FILE *F;
     if (argc > 1) {
         filename = argv[1];
