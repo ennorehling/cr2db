@@ -9,5 +9,7 @@ addons:
     packages:
       - cppcheck
       - valgrind
+      - libsqlite3-dev
+      - libfcgi-dev
 os:
   - linux
