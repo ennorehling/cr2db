@@ -5,7 +5,7 @@
 
 void log_error(const char *ident, const char *format, ...) {
     va_list ap;
-
+    (void)ident;
     va_start(ap, format);
     fputs("ERROR: ", stderr);
     vfprintf(stderr, format, ap);
