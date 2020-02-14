@@ -6,6 +6,7 @@ CREATE TABLE region (
     x INT NOT NULL,
     y INT NOT NULL,
     p INT NOT NULL,
+    turn INT,
     name TEXT,
     terrain TEXT,
     data BLOB
