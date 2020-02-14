@@ -78,7 +78,11 @@ endif (FCGI_FOUND)
 if(MSVC)
 set_target_properties (${TARGETS} PROPERTIES COMPILE_DEFINITIONS _CRT_SECURE_NO_WARNINGS)
 set_target_properties (${TARGETS} PROPERTIES COMPILE_FLAGS "/W3 /WX /MP")
+elseif (APPLE)
+  set_target_properties (${TARGETS} PROPERTIES COMPILE_FLAGS
+    "-Wall -Wextra")
 else (MSVC)
-  set_target_properties (${TARGETS} PROPERTIES COMPILE_FLAGS "-Wall -Wextra -Wno-return-local-addr")
+  set_target_properties (${TARGETS} PROPERTIES COMPILE_FLAGS 
+    "-Wall -Wextra -Wno-return-local-addr")
 endif(MSVC)
 
