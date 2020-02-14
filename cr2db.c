@@ -57,7 +57,7 @@ static int parseargs(int argc, char **argv) {
 int main(int argc, char **argv) {
     sqlite3 *db = NULL;
     int i = parseargs(argc, argv);
-    if (i > 1) {
+    if (i >= 1) {
         db_create(&db, dbname, "crschema.sql");
         if (i<argc) {
             const char *command = argv[i++];

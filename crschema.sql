@@ -13,7 +13,7 @@ CREATE TABLE region (
 );
 
 DROP TABLE IF EXISTS faction;
-CREATE TABLE region (
+CREATE TABLE faction (
     id INT PRIMARY KEY NOT NULL,
     name TEXT,
     email TEXT,
