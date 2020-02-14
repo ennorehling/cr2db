@@ -1,18 +1,8 @@
-tolua/
+*.db
+*.cr
 .vscode/
 *.orig
 eressea.ini
-Debug
-Release
-
-# SlickEdit
-*.vtg
-*.vpwhistu
-
-# Microsoft Visual Studio build artefacts
-src/Debug/
-src/Release/
-src/*.vcproj.*.user
 Debug/
 Release/
 ipch/
