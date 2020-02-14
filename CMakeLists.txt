@@ -20,7 +20,7 @@ set (TARGETS echocgi ${TARGETS})
 endif (FCGI_FOUND)
 
 if (SQLITE3_FOUND)
-  add_executable (cr2db cr2db.c log.c crfile.c)
+  add_executable (cr2db cr2db.c log.c crfile.c database.c)
   target_link_libraries (cr2db
     ${SQLITE3_LIBRARIES}
     ${CJSON_LIBRARIES}

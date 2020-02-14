@@ -1,3 +1,5 @@
+PRAGMA user_version = 1;
+
 DROP TABLE IF EXISTS region;
 CREATE TABLE region (
     id INT PRIMARY KEY NOT NULL,

@@ -88,7 +88,7 @@ static cJSON *block_create(parser_t * p, const char *name) {
     return parent;
 }
 
-static void handle_block(parser_t *p, const char * name) {
+static enum CR_Error handle_block(parser_t *p, const char * name) {
     cJSON *parent = block_create(p, name);
 
     if (parent) {
@@ -96,7 +96,9 @@ static void handle_block(parser_t *p, const char * name) {
     }
     else {
         fprintf(stderr, gettext("invalid object hierarchy at %s\n"), block_name(name, 0, NULL));
+        return CR_ERROR_GRAMMAR;
     }
+    return CR_ERROR_NONE;
 }
 
 static const char * seq_blocks[] = {
@@ -136,7 +138,7 @@ static int object_depth(const char *name) {
     return -1;
 }
 
-static void handle_object(parser_t *p, const char *name, unsigned int keyc, int keyv[]) {
+static enum CR_Error handle_object(parser_t *p, const char *name, unsigned int keyc, int keyv[]) {
     cJSON *arr = NULL;
     if (p->root == NULL) {
         if (strcmp("VERSION", name) == 0) {
@@ -151,6 +153,7 @@ static void handle_object(parser_t *p, const char *name, unsigned int keyc, int 
         }
         else {
             fprintf(stderr, gettext("expecting first element to be VERSION, got %s\n"), name);
+            return CR_ERROR_GRAMMAR;
         }
     }
     else {
@@ -165,11 +168,13 @@ static void handle_object(parser_t *p, const char *name, unsigned int keyc, int 
             }
             else {
                 fprintf(stderr, gettext("invalid object hierarchy at %s\n"), block_name(name, keyc, keyv));
+                return CR_ERROR_GRAMMAR;
             }
         }
         else {
             if (depth == 0 || depth > p->sp + 1) {
                 fprintf(stderr, gettext("invalid object hierarchy at %s\n"), block_name(name, keyc, keyv));
+                return CR_ERROR_GRAMMAR;
             }
             else {
                 parent = p->stack[depth - 1];
@@ -199,16 +204,15 @@ static void handle_object(parser_t *p, const char *name, unsigned int keyc, int 
     if (arr) {
         cJSON_AddItemToArray(arr, p->block);
     }
+    return CR_ERROR_NONE;
 }
 
-static void handle_element(void *udata, const char *name, unsigned int keyc, int keyv[]) {
+static enum CR_Error handle_element(void *udata, const char *name, unsigned int keyc, int keyv[]) {
     parser_t *p = (parser_t *)udata;
     if (keyc == 0) {
-        handle_block(p, name);
+        return handle_block(p, name);
     }
-    else {
-        handle_object(p, name, keyc, keyv);
-    }
+    return handle_object(p, name, keyc, keyv);
 }
 
 static void handle_string(void *udata, const char *name, const char *value) {
