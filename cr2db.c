@@ -15,7 +15,7 @@ int import_cr(sqlite3 *db, FILE *F, const char *filename) {
     cJSON *json;
     json = crfile_read(F, filename);
     if (json) {
-        // create database
+        (void)db;
         cJSON_Delete(json);
     }
     return 0;
@@ -32,7 +32,7 @@ static void usage(const char *program) {
     fputs("  import [filename]   import CR from a file (or stdin).\n", stderr);
 }
 
-static int parseargs(int argc, const char **argv) {
+static int parseargs(int argc, char **argv) {
     int i;
     for (i = 1; i != argc; ++i) {
         if (argv[i][0] == '-') {
