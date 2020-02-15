@@ -44,9 +44,15 @@ int import_cr(sqlite3 *db, FILE *F, const char *filename) {
                         err = sqlite3_bind_text(insert_faction, 2, jName->valuestring, -1, SQLITE_STATIC);
                         assert(err == SQLITE_OK);
                     }
+                    else {
+                        sqlite3_bind_null(insert_faction, 2);
+                    }
                     if (jMail) {
                         err = sqlite3_bind_text(insert_faction, 3, jMail->valuestring, -1, SQLITE_STATIC);
                         assert(err == SQLITE_OK);
+                    }
+                    else {
+                        sqlite3_bind_null(insert_faction, 3);
                     }
                     data = cJSON_Print(object);
                     if (data) {
@@ -54,6 +60,9 @@ int import_cr(sqlite3 *db, FILE *F, const char *filename) {
                         err = sqlite3_bind_blob(insert_faction, 4, data, sz, SQLITE_TRANSIENT);
                         assert(err == SQLITE_OK);
                         cJSON_free(data);
+                    }
+                    else {
+                        sqlite3_bind_null(insert_faction, 4);
                     }
                     err = sqlite3_step(insert_faction);
                     if (err != SQLITE_DONE) return err;
@@ -71,7 +80,7 @@ int convert_cr(FILE *F, const char *filename) {
     cJSON *json;
     json = crfile_read(F, filename);
     if (json) {
-        char *text = cJSON_Print(json);
+        char *text = cJSON_PrintUnformatted(json);
         if (text) {
             fputs(text, stdout);
             cJSON_free(text);
