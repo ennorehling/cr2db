@@ -14,7 +14,7 @@ int db_create(sqlite3 **dbp, const char * dbname, const char *schema) {
     FILE *F = NULL;
     int err, version = 0;
 
-    err = sqlite3_open(dbname, &db);
+    err = sqlite3_open_v2(dbname, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
     if (err != SQLITE_OK) goto fail;
     err = sqlite3_exec(db, "PRAGMA user_version", cb_int_col, &version, NULL);
     if (err != SQLITE_OK) goto fail;
@@ -25,10 +25,11 @@ int db_create(sqlite3 **dbp, const char * dbname, const char *schema) {
             char *sql;
             fseek(F, 0, SEEK_END);
             size = ftell(F);
-            sql = malloc(size);
+            sql = malloc(size + 1);
             if (sql) {
                 rewind(F);
                 fread(sql, sizeof(char), size, F);
+                sql[size] = 0;
                 err = sqlite3_exec(db, sql, NULL, NULL, NULL);
                 if (err != SQLITE_OK) goto fail;
             }
@@ -39,6 +40,9 @@ int db_create(sqlite3 **dbp, const char * dbname, const char *schema) {
     return SQLITE_OK;
 fail:
     if (F) fclose(F);
-    if (db) sqlite3_close(db);
+    if (db) {
+        fputs(sqlite3_errmsg(db), stderr);
+        sqlite3_close(db);
+    }
     return err;
 }
