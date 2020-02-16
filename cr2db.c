@@ -56,7 +56,7 @@ int import_cr(sqlite3 *db, FILE *F, const char *filename) {
                     }
                     data = cJSON_Print(object);
                     if (data) {
-                        size_t sz = strlen(data);
+                        int sz = (int) strlen(data);
                         err = sqlite3_bind_blob(insert_faction, 4, data, sz, SQLITE_TRANSIENT);
                         assert(err == SQLITE_OK);
                         cJSON_free(data);
