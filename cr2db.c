@@ -14,62 +14,15 @@
 
 int import_cr(sqlite3 *db, FILE *F, const char *filename) {
     cJSON *json;
-    int err;
     assert(db);
     json = crfile_read(F, filename);
     if (json) {
         cJSON *factions = cJSON_GetObjectItem(json, "PARTEI");
         if (factions->type == cJSON_Array) {
-            sqlite3_stmt *insert_faction = NULL;
             cJSON *object;
-            err = sqlite3_prepare_v2(db,
-                "INSERT INTO `faction` (`id`, `name`, `email`, `data`) VALUES (?,?,?,?)",
-                -1, &insert_faction, NULL);
-            if (err != SQLITE_OK) {
-                const char * msg = sqlite3_errmsg(db);
-                fputs(msg, stderr);
-                return err;
-            }
             cJSON_ArrayForEach(object, factions) {
-                cJSON *jId = cJSON_GetObjectItem(object, "id");
-                if (jId) {
-                    cJSON *jName = cJSON_GetObjectItem(object, "Parteiname");
-                    cJSON *jMail = cJSON_GetObjectItem(object, "email");
-                    char * data;
-                    err = sqlite3_reset(insert_faction);
-                    assert(err == SQLITE_OK);
-                    err = sqlite3_bind_int(insert_faction, 1, jId->valueint);
-                    assert(err == SQLITE_OK);
-                    if (jName) {
-                        err = sqlite3_bind_text(insert_faction, 2, jName->valuestring, -1, SQLITE_STATIC);
-                        assert(err == SQLITE_OK);
-                    }
-                    else {
-                        sqlite3_bind_null(insert_faction, 2);
-                    }
-                    if (jMail) {
-                        err = sqlite3_bind_text(insert_faction, 3, jMail->valuestring, -1, SQLITE_STATIC);
-                        assert(err == SQLITE_OK);
-                    }
-                    else {
-                        sqlite3_bind_null(insert_faction, 3);
-                    }
-                    data = cJSON_Print(object);
-                    if (data) {
-                        int sz = (int) strlen(data);
-                        err = sqlite3_bind_blob(insert_faction, 4, data, sz, SQLITE_TRANSIENT);
-                        assert(err == SQLITE_OK);
-                        cJSON_free(data);
-                    }
-                    else {
-                        sqlite3_bind_null(insert_faction, 4);
-                    }
-                    err = sqlite3_step(insert_faction);
-                    if (err != SQLITE_DONE) return err;
-                }
+                db_write_faction(db, object);
             }
-            err = sqlite3_finalize(insert_faction);
-            assert(err == SQLITE_OK);
         }
         cJSON_Delete(json);
     }
@@ -144,7 +97,7 @@ int main(int argc, char **argv) {
         }
         else {
             sqlite3 *db = NULL;
-            db_create(&db, dbname, "crschema.sql");
+            db_open(&db, dbname, "crschema.sql");
             if (strcmp(command, "import") == 0) {
                 FILE * F = stdin;
                 const char *infile = "stdin";
@@ -159,6 +112,7 @@ int main(int argc, char **argv) {
                     }
                 }
             }
+            db_close(db);
         }
     }
     return 0;
