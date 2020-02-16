@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.8)
 project (crservice C)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -6,8 +6,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 add_subdirectory (crpat)
 add_subdirectory (cJSON)
 
-find_package(SQLite3)
-find_package(Fcgi)
+find_library(SQLITE3 NAMES sqlite3)
+find_path (SQLITE3_INCLUDE_DIR NAMES sqlite3.h)
+find_path (CJSON_INCLUDE_DIR NAMES cJSON.h)
+find_library(FCGI NAMES fcgi)
 
 set (TARGETS hellocgi crservice cr2json)
 
@@ -19,10 +21,10 @@ target_include_directories (echocgi PRIVATE ${FCGI_INCLUDE_DIR})
 set (TARGETS echocgi ${TARGETS})
 endif (FCGI_FOUND)
 
-if (SQLITE3_FOUND)
+if (SQLITE3)
   add_executable (cr2db cr2db.c log.c crfile.c database.c)
   target_link_libraries (cr2db
-    ${SQLITE3_LIBRARIES}
+    ${SQLITE3}
     ${CJSON_LIBRARIES}
     ${CRPAT_LIBRARIES}
     )
@@ -32,7 +34,7 @@ if (SQLITE3_FOUND)
     ${CRPAT_INCLUDE_DIR}
     )
   set (TARGETS cr2db ${TARGETS})
-endif(SQLITE3_FOUND)
+endif(SQLITE3)
 
 # cr2json cli converter
 add_executable (cr2json cr2json.c crfile.c log.c)
