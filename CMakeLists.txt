@@ -1,13 +1,14 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.8)
 project (crservice C)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 add_subdirectory (crpat)
-add_subdirectory (cJSON)
 
-find_package(SQLite3)
-find_package(Fcgi)
+find_package(SQLite3 REQUIRED)
+find_library(FCGI NAMES fcgi)
+
+add_subdirectory (cJSON)
 
 set (TARGETS hellocgi crservice cr2json)
 
