@@ -12,17 +12,72 @@
 #include <stdio.h>
 #include <string.h>
 
+static int write_array(sqlite3 *db, cJSON *arr, int(*dbwrite)(sqlite3 *, cJSON *)) {
+    cJSON *object;
+    cJSON_ArrayForEach(object, arr) {
+        int err = dbwrite(db, object);
+        if (err != SQLITE_OK) {
+            return err;
+        }
+    }
+    return SQLITE_OK;
+}
+
+static int write_region(sqlite3 *db, cJSON *object) {
+    cJSON *units = NULL;
+    cJSON *ships = NULL;
+    cJSON *buildings = NULL;
+    cJSON **childp = &object->child;
+    while (*childp) {
+        cJSON *child = *childp;
+        if (child->type == cJSON_Array && child->string) {
+            if (strcmp(child->string, "EINHEIT") == 0) {
+                units = child;
+                *childp = child->next;
+            }
+            else if (strcmp(child->string, "SCHIFF") == 0) {
+                ships = child;
+                *childp = child->next;
+            }
+            else if (strcmp(child->string, "BURG") == 0) {
+                buildings = child;
+                *childp = child->next;
+            }
+            else {
+                childp = &child->next;
+            }
+        }
+        else {
+            childp = &child->next;
+        }
+    }
+    if (units) {
+        write_array(db, units, db_write_unit);
+    }
+    if (ships) {
+        write_array(db, ships, db_write_ship);
+    }
+    if (buildings) {
+        write_array(db, buildings, db_write_building);
+    }
+    return db_write_region(db, object);
+}
+
 int import_cr(sqlite3 *db, FILE *F, const char *filename) {
     cJSON *json;
     assert(db);
     json = crfile_read(F, filename);
     if (json) {
         cJSON *factions = cJSON_GetObjectItem(json, "PARTEI");
-        if (factions->type == cJSON_Array) {
+        cJSON *regions = cJSON_GetObjectItem(json, "REGION");
+        if (factions && factions->type == cJSON_Array) {
             cJSON *object;
             cJSON_ArrayForEach(object, factions) {
                 db_write_faction(db, object);
             }
+        }
+        if (regions && regions->type == cJSON_Array) {
+            write_array(db, regions, write_region);
         }
         cJSON_Delete(json);
     }

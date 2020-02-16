@@ -8,10 +8,57 @@
 #include <string.h>
 
 static sqlite3_stmt *g_stmt_insert_faction;
+static sqlite3_stmt *g_stmt_insert_region;
 
 static int cb_int_col(void *data, int ncols, char **text, char **name) {
     int *p_int = (int *)data;
     *p_int = atoi(text[0]);
+    return SQLITE_OK;
+}
+
+int db_write_unit(sqlite3 *db, struct cJSON *object) {
+    return SQLITE_OK;
+}
+
+int db_write_ship(sqlite3 *db, struct cJSON *object) {
+    return SQLITE_OK;
+}
+
+int db_write_building(sqlite3 *db, struct cJSON *object) {
+    return SQLITE_OK;
+}
+
+int db_write_region(sqlite3 *db, struct cJSON *object) {
+    int err;
+    cJSON *jId = cJSON_GetObjectItem(object, "id");
+    if (jId) {
+        char *data;
+        cJSON *jX = cJSON_GetObjectItem(object, "x");
+        cJSON *jY = cJSON_GetObjectItem(object, "y");
+        cJSON *jZ = cJSON_GetObjectItem(object, "z");
+        cJSON *jName = cJSON_GetObjectItem(object, "Name");
+        cJSON *jTerrain = cJSON_GetObjectItem(object, "Terrain");
+        err = sqlite3_reset(g_stmt_insert_region);
+        err = sqlite3_bind_int(g_stmt_insert_region, 1, jId->valueint);
+        err = sqlite3_bind_int(g_stmt_insert_region, 2, jX->valueint);
+        err = sqlite3_bind_int(g_stmt_insert_region, 3, jY->valueint);
+        err = sqlite3_bind_int(g_stmt_insert_region, 4, jZ ? jZ->valueint : 0);
+        err = sqlite3_bind_text(g_stmt_insert_region, 5, jName->valuestring, -1, SQLITE_STATIC);
+        err = sqlite3_bind_text(g_stmt_insert_region, 6, jTerrain->valuestring, -1, SQLITE_STATIC);
+
+        data = cJSON_PrintUnformatted(object);
+        if (data) {
+            int sz = (int)strlen(data);
+            err = sqlite3_bind_blob(g_stmt_insert_region, 7, data, sz, SQLITE_TRANSIENT);
+            assert(err == SQLITE_OK);
+            cJSON_free(data);
+        }
+        else {
+            sqlite3_bind_null(g_stmt_insert_region, 7);
+        }
+        err = sqlite3_step(g_stmt_insert_region);
+        if (err != SQLITE_DONE) return err;
+    }
     return SQLITE_OK;
 }
 
@@ -44,7 +91,7 @@ int db_write_faction(sqlite3 *db, struct cJSON *object) {
             sqlite3_bind_null(g_stmt_insert_faction, 3);
             sqlite3_bind_null(g_stmt_insert_faction, 6);
         }
-        data = cJSON_Print(object);
+        data = cJSON_PrintUnformatted(object);
         if (data) {
             int sz = (int) strlen(data);
             err = sqlite3_bind_blob(g_stmt_insert_faction, 4, data, sz, SQLITE_TRANSIENT);
@@ -99,6 +146,14 @@ int db_open(sqlite3 **dbp, const char * dbname, const char *schema) {
         fputs(msg, stderr);
         return err;
     }
+    err = sqlite3_prepare_v2(db,
+        "INSERT INTO `region` (`id`, `x`, `y`, `p`, `name`, `terrain`, `data`) VALUES (?,?,?,?,?,?,?)",
+        -1, &g_stmt_insert_region, NULL);
+    if (err != SQLITE_OK) {
+        const char * msg = sqlite3_errmsg(db);
+        fputs(msg, stderr);
+        return err;
+    }
 
     *dbp = db;
     return SQLITE_OK;
@@ -114,6 +169,7 @@ fail:
 int db_close(sqlite3 * db) {
     int err;
     err = sqlite3_finalize(g_stmt_insert_faction);
+    err = sqlite3_finalize(g_stmt_insert_region);
     assert(err == SQLITE_OK);
     err = sqlite3_close(db);
     return err;
