@@ -5,16 +5,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 add_subdirectory (crpat)
 
-find_package(SQLITE3 REQUIRED)
-find_package(CJSON REQUIRED)
+find_package(SQLite3 REQUIRED)
 find_library(FCGI NAMES fcgi)
 
-if (CJSON_FOUND)
-set (CJSON_LIBRARIES ${CJSON_LIBRARY})
-else(CJSON_FOUND)
-# no json system package installed, use submodule:
 add_subdirectory (cJSON)
-endif(CJSON_FOUND)
 
 set (TARGETS hellocgi crservice cr2json)
 
