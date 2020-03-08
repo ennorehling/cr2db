@@ -13,4 +13,3 @@ struct cJSON *crdata_get_ship(struct crdata *cr, int no, struct cJSON *region);
 struct cJSON *crdata_get_building(struct crdata *cr, int no, struct cJSON *region);
 
 char *int_to_id(int no);
-char *itoa_base(int value, char * buffer, int radix);

@@ -9,6 +9,7 @@ find_package(SQLite3 REQUIRED)
 find_library(FCGI NAMES fcgi)
 
 add_subdirectory (cJSON)
+add_subdirectory (clibs)
 
 set (TARGETS hellocgi crservice cr2json)
 
@@ -21,18 +22,20 @@ set (TARGETS echocgi ${TARGETS})
 endif (FCGI_FOUND)
 
 if (SQLITE3_FOUND)
-  add_executable (cr2db cr2db.c log.c crfile.c database.c)
-  target_link_libraries (cr2db
-    ${SQLITE3_LIBRARIES}
-    ${CJSON_LIBRARIES}
+  add_executable (atl-cli atlcli.c log.c crfile.c gamedb.c jsondata.c)
+  target_link_libraries (atl-cli
+    ${CLIBS_LIBRARIES}
     ${CRPAT_LIBRARIES}
+    ${CJSON_LIBRARIES}
+    ${SQLITE3_LIBRARIES}
     )
-  target_include_directories (cr2db PRIVATE 
-    ${SQLITE3_INCLUDE_DIR}
-    ${CJSON_INCLUDE_DIR}
+  target_include_directories (atl-cli PRIVATE 
+    ${CLIBS_INCLUDE_DIR}
     ${CRPAT_INCLUDE_DIR}
+    ${CJSON_INCLUDE_DIR}
+    ${SQLITE3_INCLUDE_DIR}
     )
-  set (TARGETS cr2db ${TARGETS})
+  set (TARGETS atl-cli ${TARGETS})
 endif(SQLITE3_FOUND)
 
 # cr2json cli converter
@@ -77,7 +80,7 @@ endif (FCGI_FOUND)
 #endif(SQLITE3_FOUND)
 
 if(MSVC)
-set_target_properties (${TARGETS} PROPERTIES COMPILE_DEFINITIONS _CRT_SECURE_NO_WARNINGS)
+#set_target_properties (${TARGETS} PROPERTIES COMPILE_DEFINITIONS _CRT_SECURE_NO_WARNINGS)
 set_target_properties (${TARGETS} PROPERTIES COMPILE_FLAGS "/W3 /WX /MP")
 elseif (APPLE)
   set_target_properties (${TARGETS} PROPERTIES COMPILE_FLAGS
