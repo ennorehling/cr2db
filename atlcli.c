@@ -12,12 +12,13 @@
 #include <sqlite3.h>
 #include <crpat.h>
 
+#include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
 static sqlite3 * g_db;
-static const char *g_dbname = "game.db";
+static const char *g_dbname = ":memory:";
 const char *g_program = "atl-cli";
 
 int eval_command(int argc, char **argv);
@@ -86,18 +87,170 @@ int eval_script(int argc, char **argv) {
     return 0;
 }
 
-int db_load(sqlite3 *db, gamedata *gd) {
-    int err = SQLITE_OK;
-    return err;
-}
-
 int db_save(sqlite3 *db, gamedata *gd) {
     int err = SQLITE_OK;
     return err;
 }
 
+static int merge_faction(gamedata *gd, cJSON *obj) {
+    faction *f;
+    assert(obj->type == cJSON_Object);
+    f = faction_create(gd, obj);
+    return db_write_faction(g_db, f);
+}
+
+static int merge_factions(gamedata *gd, cJSON *arr) {
+    int err = SQLITE_OK;
+    cJSON *child;
+    assert(arr->type == cJSON_Array);
+    for (child = arr->child; child; child = child->next) {
+        assert(child->type == cJSON_Object);
+        err = merge_faction(gd, child);
+        if (err != SQLITE_OK) break;
+    }
+    return err;
+}
+
+static int merge_ship(gamedata *gd, cJSON *obj, struct region *r) {
+    ship *sh;
+    assert(obj->type == cJSON_Object);
+    sh = ship_create(gd, r, obj);
+    return db_write_ship(g_db, sh);
+}
+
+static int merge_ships(gamedata *gd, cJSON *arr, struct region *r) {
+    int err = SQLITE_OK;
+    cJSON *child;
+    assert(arr->type == cJSON_Array);
+    for (child = arr->child; child; child = child->next) {
+        assert(child->type == cJSON_Object);
+        err = merge_ship(gd, child, r);
+        if (err != SQLITE_OK) break;
+    }
+    return err;
+}
+
+static int merge_building(gamedata *gd, cJSON *obj, struct region *r) {
+    building *b;
+    assert(obj->type == cJSON_Object);
+    b = building_create(gd, r, obj);
+    return db_write_building(g_db, b);
+}
+
+static int merge_buildings(gamedata *gd, cJSON *arr, struct region *r) {
+    int err = SQLITE_OK;
+    cJSON *child;
+    assert(arr->type == cJSON_Array);
+    for (child = arr->child; child; child = child->next) {
+        assert(child->type == cJSON_Object);
+        err = merge_building(gd, child, r);
+        if (err != SQLITE_OK) break;
+    }
+    return err;
+}
+
+static int merge_unit(gamedata *gd, cJSON *obj, struct region *r) {
+    unit *u;
+    assert(obj->type == cJSON_Object);
+    u = unit_create(gd, r, obj);
+    return db_write_unit(g_db, u);
+}
+
+static int merge_units(gamedata *gd, cJSON *arr, struct region *r) {
+    int err = SQLITE_OK;
+    cJSON *child;
+    assert(arr->type == cJSON_Array);
+    for (child = arr->child; child; child = child->next) {
+        assert(child->type == cJSON_Object);
+        err = merge_unit(gd, child, r);
+        if (err != SQLITE_OK) break;
+    }
+    return err;
+}
+
+static int merge_region(gamedata *gd, cJSON *obj, int turn) {
+    cJSON **p_child = &obj->child;
+    cJSON *jUnits = NULL;
+    cJSON *jShips = NULL;
+    cJSON *jBuildings = NULL;
+    region *r, *orig;
+    assert(obj->type == cJSON_Object);
+    while (*p_child) {
+        cJSON * child = *p_child;
+        if (child->type == cJSON_Array) {
+            if (strcmp("EINHEIT", child->string) == 0) {
+                jUnits = child;
+                *p_child = child->next;
+                continue;
+            }
+            else if (strcmp("BURG", child->string) == 0) {
+                jBuildings = child;
+                *p_child = child->next;
+                continue;
+            }
+            else if (strcmp("SCHIFF", child->string) == 0) {
+                jShips = child;
+                *p_child = child->next;
+                continue;
+            }
+        }
+        p_child = &child->next;
+    }
+    r = region_create(gd, obj, turn);
+    if (r) {
+        // TODO: this is leaking the arrays!
+        if (jShips) {
+            merge_ships(gd, jShips, r);
+        }
+        if (jBuildings) {
+            merge_buildings(gd, jBuildings, r);
+        }
+        if (jUnits) {
+            merge_units(gd, jUnits, r);
+        }
+        orig = region_get(gd, r->id);
+        if (orig) {
+            // merge the two regions
+        }
+        return db_write_region(g_db, r);
+    }
+    return -1;
+}
+
+static int merge_regions(gamedata *gd, cJSON *arr, int turn) {
+    int err = SQLITE_OK;
+    cJSON *child;
+    assert(arr->type == cJSON_Array);
+    for (child = arr->child; child; child = child->next) {
+        assert(child->type == cJSON_Object);
+        err = merge_region(gd, child, turn);
+        if (err != SQLITE_OK) break;
+    }
+    return err;
+}
+
 int gd_merge(gamedata *gd, cJSON *json) {
-    return 0;
+    int turn = 0;
+    int err = SQLITE_OK;
+    cJSON *child;
+    assert(json->type == cJSON_Object);
+    child = cJSON_GetObjectItem(json, "Runde");
+    if (child) {
+        turn = child->valueint;
+    }
+    for (child = json->child; child; child = child->next) {
+        if (child->type == cJSON_Array) {
+            if (0 == strcmp(child->string, "PARTEI")) {
+                 err = merge_factions(gd, child);
+                 if (err != SQLITE_OK) break;
+            }
+            else if (0 == strcmp(child->string, "REGION")) {
+                err = merge_regions(gd, child, turn);
+                if (err != SQLITE_OK) break;
+            }
+        }
+    }
+    return err;
 }
 
 int import_cr(int argc, char **argv) {
@@ -125,13 +278,6 @@ int import_cr(int argc, char **argv) {
             err = db_load(g_db, gd);
             if (err != SQLITE_OK) goto fail;
             gd_merge(gd, json);
-            err = db_save(g_db, gd);
-            if (err != SQLITE_OK) goto fail;
-        }
-        char *text = cJSON_PrintUnformatted(json);
-        if (text) {
-            fputs(text, stdout);
-            cJSON_free(text);
         }
         cJSON_Delete(json);
     }
@@ -163,6 +309,7 @@ int eval_command(int argc, char **argv) {
     };
     const char *command = argv[0];
     int i;
+    if (command[0] == '#') return 0;
     for (i = 0; procs[i].command; ++i) {
         if (strcmp(command, procs[i].command) == 0) {
             if (procs[i].eval) {
@@ -183,12 +330,12 @@ int main(int argc, char **argv) {
     g_program = argv[0];
     i = parseargs(argc, argv);
     jsondata_open();
-    if (i >= 1 && i < argc) {
+    if (i >= 1 && i <= argc) {
         err = eval_command(argc-i, argv + i);
     }
     jsondata_close();
     if (g_db) {
-        err = sqlite3_close(g_db);
+        err = db_close(g_db);
     }
     return err;
 }

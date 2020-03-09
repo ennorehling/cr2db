@@ -65,10 +65,17 @@ void game_free(struct gamedata *gd);
 struct faction *faction_create(struct gamedata *gd, struct cJSON *data);
 struct faction *faction_get(struct gamedata *gd, int id);
 
-struct region *region_create(struct gamedata *gd, struct cJSON *data);
+struct region *region_create(struct gamedata *gd, struct cJSON *data, int turn);
 struct region *region_get(struct gamedata *gd, int id);
 
 struct ship *ship_create(struct gamedata *gd, struct region *r, struct cJSON *data);
-struct ship *ship_get(struct gamedata *gd, int id);
+struct ship *ship_get(struct gamedata *gd, int id, const struct region *r);
+
+struct building *building_create(struct gamedata *gd, struct region *r, struct cJSON *data);
+struct building *building_get(struct gamedata *gd, int id, const struct region *r);
+
+struct unit *unit_create(struct gamedata *gd, struct region *r, struct cJSON *data);
+struct unit *unit_get(struct gamedata *gd, int id, const struct region *r);
 
 extern char *terrainname[];
+extern char *racename[];
