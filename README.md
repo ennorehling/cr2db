@@ -12,3 +12,13 @@
                 Options +ExecCGI
         </Location>
 </VirtualHost>
+
+# "Neuen" CR importieren:
+
+Datenbank öffnen
+CR laden in ein cJSON
+Für alle Parteien: UPDATE der faction.
+Für alle Regionen:
+- Einheiten, Schiffe und Burgen aus dem JSON lösen
+- wenn ich drin stehe, UPDATE der region.
+- wenn ich GRENZE, PREISE, RESOURCE nicht sehe, dann den Block aus der DB einflechten.

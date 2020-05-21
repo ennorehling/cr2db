@@ -1,3 +1,2 @@
-create-database
 import-cr sample.cr
 #export-cr export.cr

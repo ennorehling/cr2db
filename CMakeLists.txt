@@ -22,7 +22,7 @@ set (TARGETS echocgi ${TARGETS})
 endif (FCGI_FOUND)
 
 if (SQLITE3_FOUND)
-  add_executable (atl-cli atlcli.c log.c crfile.c gamedb.c jsondata.c)
+  add_executable (atl-cli atlcli.c log.c crfile.c gamedb.c jsondata.c config.c)
   target_link_libraries (atl-cli
     ${CLIBS_LIBRARIES}
     ${CRPAT_LIBRARIES}

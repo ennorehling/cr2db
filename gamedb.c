@@ -4,6 +4,7 @@
 #endif
 #endif
 
+#include "gamedb.h"
 #include "jsondata.h"
 
 #include <cJSON.h>
@@ -14,24 +15,88 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+static sqlite3_stmt *g_stmt_insert_faction;
+static sqlite3_stmt *g_stmt_select_faction;
+
+static int db_bind_json(sqlite3_stmt *stmt, int index, cJSON *object) {
+    int err;
+    char *data = cJSON_PrintUnformatted(object);
+    if (data) {
+        int sz = (int)strlen(data);
+        err = sqlite3_bind_blob(stmt, index, data, sz, SQLITE_TRANSIENT);
+        cJSON_free(data);
+    }
+    else {
+        err = sqlite3_bind_null(stmt, 4);
+    }
+    return err;
+}
+
+int db_write_faction(sqlite3 *db, const faction *f) {
+    int err;
+    err = sqlite3_reset(g_stmt_insert_faction);
+    if (err != SQLITE_OK) goto db_write_faction_fail;
+    err = sqlite3_bind_int(g_stmt_insert_faction, 1, f->id);
+    if (err != SQLITE_OK) goto db_write_faction_fail;
+    err = db_bind_json(g_stmt_insert_faction, 2, f->data);
+    if (err != SQLITE_OK) goto db_write_faction_fail;
+    err = sqlite3_bind_text(g_stmt_insert_faction, 3, f->name, -1, SQLITE_STATIC);
+    if (err != SQLITE_OK) goto db_write_faction_fail;
+    err = sqlite3_bind_text(g_stmt_insert_faction, 4, f->email, -1, SQLITE_STATIC);
+    if (err != SQLITE_OK) goto db_write_faction_fail;
+
+    err = sqlite3_step(g_stmt_insert_faction);
+    if (err != SQLITE_DONE) goto db_write_faction_fail;
+    return SQLITE_OK;
+
+db_write_faction_fail:
+    fputs(sqlite3_errmsg(db), stderr);
+    return err;
+}
+
+faction *db_read_faction(sqlite3 *db, int id) {
+    int err;
+    const void *data;
+    err = sqlite3_reset(g_stmt_select_faction);
+    if (err != SQLITE_OK) goto db_read_faction_fail;
+    err = sqlite3_bind_int(g_stmt_select_faction, 1, id);
+    if (err != SQLITE_OK) goto db_read_faction_fail;
+    err = sqlite3_step(g_stmt_select_faction);
+    if (err != SQLITE_DONE) goto db_read_faction_fail;
+    data = sqlite3_column_blob(g_stmt_select_faction, 0);
+    if (data) {
+        cJSON *json = cJSON_Parse(data);
+        if (json) {
+            return faction_create(json);
+        }
+    }
+    return NULL;
+
+db_read_faction_fail:
+    fputs(sqlite3_errmsg(db), stderr);
+    return NULL;
+}
+
+/*
 static sqlite3_stmt *g_stmt_insert_unit;
 static sqlite3_stmt *g_stmt_insert_ship;
 static sqlite3_stmt *g_stmt_insert_building;
 static sqlite3_stmt *g_stmt_insert_region;
-static sqlite3_stmt *g_stmt_insert_faction;
+*/
 
+/*
 static int cb_load_faction(void *udata, int ncols, char **text, char **name) {
     gamedata *gd = (gamedata *)udata;
     cJSON *json = cJSON_Parse(text[0]);
-    faction_create(gd, json);
+    faction *f = faction_create(json);
+    faction_add(gd, f);
     return SQLITE_OK;
 }
 
 static int cb_load_region(void *udata, int ncols, char **text, char **name) {
     gamedata *gd = (gamedata *)udata;
     cJSON *json = cJSON_Parse(text[0]);
-    int turn = atoi(text[1]);
-    region_create(gd, json, turn);
+    region_create(gd, json);
     return SQLITE_OK;
 }
 
@@ -64,31 +129,37 @@ static int cb_load_unit(void *udata, int ncols, char **text, char **name) {
 
 int db_load(sqlite3 *db, gamedata *gd) {
     int err = SQLITE_OK;
-    err = sqlite3_exec(db, "SELECT data FROM faction", cb_load_faction, gd, NULL);
-    err = sqlite3_exec(db, "SELECT data, turn FROM region", cb_load_region, gd, NULL);
-    err = sqlite3_exec(db, "SELECT data, region_id FROM ship", cb_load_ship, gd, NULL);
-    err = sqlite3_exec(db, "SELECT data, region_id FROM building", cb_load_building, gd, NULL);
-    err = sqlite3_exec(db, "SELECT data, region_id FROM unit", cb_load_unit, gd, NULL);
+    err = sqlite3_exec(db, "SELECT data FROM factions", cb_load_faction, gd, NULL);
+    err = sqlite3_exec(db, "SELECT data FROM regions", cb_load_region, gd, NULL);
+    err = sqlite3_exec(db, "SELECT data, region_id FROM ships", cb_load_ship, gd, NULL);
+    err = sqlite3_exec(db, "SELECT data, region_id FROM buildings", cb_load_building, gd, NULL);
+    err = sqlite3_exec(db, "SELECT data, region_id FROM units", cb_load_unit, gd, NULL);
     return err;
 }
+*/
 
 static int db_prepare(sqlite3 *db) {
     int err;
     err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `unit` (`id`, `data`, `name`, `orders`, `region_id`, `faction_id`) VALUES (?,?,?,?,?,?)", -1,
-        &g_stmt_insert_unit, NULL);
-    err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `region` (`id`, `data`, `x`, `y`, `p`, `turn`, `name`, `terrain`) VALUES (?,?,?,?,?,?,?,?)", -1,
-        &g_stmt_insert_region, NULL);
-    err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `faction` (`id`, `data`, `name`, `email`) VALUES (?,?,?,?)", -1,
+        "INSERT OR REPLACE INTO `factions` (`id`, `data`, `name`, `email`) VALUES (?,?,?,?)", -1,
         &g_stmt_insert_faction, NULL);
     err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `ship` (`id`, `data`, `name`, `region_id`) VALUES (?,?,?,?)", -1,
+        "SELECT `data` FROM `factions` WHERE `id` = ?", -1,
+        &g_stmt_select_faction, NULL);
+/*
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `units` (`id`, `data`, `name`, `orders`, `region_id`, `faction_id`) VALUES (?,?,?,?,?,?)", -1,
+        &g_stmt_insert_unit, NULL);
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `regions` (`id`, `data`, `x`, `y`, `p`, `turn`, `name`, `terrain`) VALUES (?,?,?,?,?,?,?,?)", -1,
+        &g_stmt_insert_region, NULL);
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `ships` (`id`, `data`, `name`, `region_id`) VALUES (?,?,?,?)", -1,
         &g_stmt_insert_ship, NULL);
     err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `building` (`id`, `data`, `name`, `region_id`) VALUES (?,?,?,?)", -1,
+        "INSERT OR REPLACE INTO `buildings` (`id`, `data`, `name`, `region_id`) VALUES (?,?,?,?)", -1,
         &g_stmt_insert_building, NULL);
+*/
     return err;
 }
 
@@ -173,8 +244,11 @@ db_open_fail:
 
 int db_close(sqlite3 * db) {
     int err;
+    err = sqlite3_finalize(g_stmt_select_faction);
+    g_stmt_select_faction = NULL;
     err = sqlite3_finalize(g_stmt_insert_faction);
     g_stmt_insert_faction = NULL;
+/*
     err = sqlite3_finalize(g_stmt_insert_region);
     g_stmt_insert_region = NULL;
     err = sqlite3_finalize(g_stmt_insert_unit);
@@ -183,24 +257,12 @@ int db_close(sqlite3 * db) {
     g_stmt_insert_ship = NULL;
     err = sqlite3_finalize(g_stmt_insert_building);
     g_stmt_insert_building = NULL;
+*/
     err = sqlite3_close(db);
     return err;
 }
 
-static int db_bind_json(sqlite3_stmt *stmt, int index, cJSON *object) {
-    int err;
-    char *data = cJSON_PrintUnformatted(object);
-    if (data) {
-        int sz = (int)strlen(data);
-        err = sqlite3_bind_blob(stmt, index, data, sz, SQLITE_TRANSIENT);
-        cJSON_free(data);
-    }
-    else {
-        err = sqlite3_bind_null(stmt, 4);
-    }
-    return err;
-}
-
+/*
 int db_write_unit(struct sqlite3 *db, const struct unit *u) {
     // INSERT INTO `unit` (`id`, `data`, `name`, `orders`, `region_id`, `faction_id`) VALUES (?,?,?,?,?,?)
     int err;
@@ -339,24 +401,4 @@ db_write_region_fail:
     fputs(sqlite3_errmsg(db), stderr);
     return err;
 }
-
-int db_write_faction(struct sqlite3 *db, const struct faction *f) {
-    int err;
-    err = sqlite3_reset(g_stmt_insert_faction);
-    if (err != SQLITE_OK) goto db_write_faction_fail;
-    err = sqlite3_bind_int(g_stmt_insert_faction, 1, f->id);
-    if (err != SQLITE_OK) goto db_write_faction_fail;
-    err = db_bind_json(g_stmt_insert_faction, 2, f->data);
-    if (err != SQLITE_OK) goto db_write_faction_fail;
-    err = sqlite3_bind_text(g_stmt_insert_faction, 3, f->name, -1, SQLITE_STATIC);
-    if (err != SQLITE_OK) goto db_write_faction_fail;
-    err = sqlite3_bind_text(g_stmt_insert_faction, 4, f->email, -1, SQLITE_STATIC);
-    if (err != SQLITE_OK) goto db_write_faction_fail;
-
-    err = sqlite3_step(g_stmt_insert_faction);
-    if (err != SQLITE_DONE) goto db_write_faction_fail;
-    return SQLITE_OK;
-db_write_faction_fail:
-    fputs(sqlite3_errmsg(db), stderr);
-    return err;
-}
+*/
