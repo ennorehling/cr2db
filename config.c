@@ -36,7 +36,7 @@ const char *config_get(const char *key, const char *def)
     
     err = sqlite3_reset(g_stmt_select_config);
     err = sqlite3_bind_text(g_stmt_select_config, 1, key, -1, SQLITE_STATIC);
-
+    
     err = sqlite3_step(g_stmt_select_config);
     if (SQLITE_ROW == err) {
         const char *result = sqlite3_column_text(g_stmt_select_config, 0);
@@ -52,7 +52,7 @@ void config_set(const char *key, const char *value)
     err = sqlite3_reset(g_stmt_update_config);
     err = sqlite3_bind_text(g_stmt_update_config, 1, key, -1, SQLITE_STATIC);
     if (value != NULL) {
-        err = sqlite3_bind_text(g_stmt_update_config, 2, key, -1, SQLITE_STATIC);
+        err = sqlite3_bind_text(g_stmt_update_config, 2, value, -1, SQLITE_STATIC);
     }
     else {
         err = sqlite3_bind_null(g_stmt_update_config, 2);

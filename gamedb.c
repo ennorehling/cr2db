@@ -27,7 +27,7 @@ static int db_bind_json(sqlite3_stmt *stmt, int index, cJSON *object) {
         cJSON_free(data);
     }
     else {
-        err = sqlite3_bind_null(stmt, 4);
+        err = sqlite3_bind_null(stmt, index);
     }
     return err;
 }
@@ -50,6 +50,7 @@ int db_write_faction(sqlite3 *db, const faction *f) {
     return SQLITE_OK;
 
 db_write_faction_fail:
+    err = sqlite3_extended_errcode(db);
     fputs(sqlite3_errmsg(db), stderr);
     return err;
 }
