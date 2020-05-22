@@ -290,6 +290,11 @@ int gd_merge(gamedata *gd, int game_turn, cJSON *json) {
             }
         }
     }
+    if (game_turn < turn) {
+        char buf[12];
+        snprintf(buf, sizeof(buf), "%d", turn);
+        config_set("turn", buf);
+    }
     return err;
 }
 
@@ -382,11 +387,11 @@ int main(int argc, char **argv) {
     if (i >= 1 && i <= argc) {
         err = eval_command(argc-i, argv + i);
     }
-    if (g_db) {
-        err = db_close(g_db);
-    }
     config_done();
     jsondata_done();
 
+    if (g_db) {
+        err = db_close(g_db);
+    }
     return err;
 }
