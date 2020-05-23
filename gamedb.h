@@ -20,4 +20,4 @@ int db_write_region(struct sqlite3 *db, const struct region *r);
 */
 
 int db_write_faction(struct sqlite3 *db, const struct faction *f);
-struct faction *db_read_faction(struct sqlite3 *db, int id);
+struct faction *db_read_faction(struct sqlite3 *db, unsigned int id);

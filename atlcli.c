@@ -93,12 +93,23 @@ int json_get_int(cJSON *obj, const char *key) {
     return child->valueint;
 }
 
+faction *load_faction(gamedata *gd, unsigned int id) {
+    faction *f = faction_get(gd, id);
+    if (f == NULL) {
+        f = db_read_faction(g_db, id);
+        if (f) {
+            faction_add(gd, f);
+        }
+    }
+    return f;
+}
+
 static int merge_faction(gamedata *gd, cJSON *obj, bool is_new) {
     faction *f;
     int id;
     assert(obj->type == cJSON_Object);
     id = json_get_int(obj, "id");
-    f = faction_get(gd, id);
+    f = load_faction(gd, id);
     if (f == NULL) {
         f = faction_create(obj);
         if (f != NULL) {

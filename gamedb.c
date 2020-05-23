@@ -36,7 +36,7 @@ int db_write_faction(sqlite3 *db, const faction *f) {
     int err;
     err = sqlite3_reset(g_stmt_insert_faction);
     if (err != SQLITE_OK) goto db_write_faction_fail;
-    err = sqlite3_bind_int(g_stmt_insert_faction, 1, f->id);
+    err = sqlite3_bind_int64(g_stmt_insert_faction, 1, (sqlite3_int64)f->id);
     if (err != SQLITE_OK) goto db_write_faction_fail;
     err = db_bind_json(g_stmt_insert_faction, 2, f->data);
     if (err != SQLITE_OK) goto db_write_faction_fail;
@@ -55,12 +55,12 @@ db_write_faction_fail:
     return err;
 }
 
-faction *db_read_faction(sqlite3 *db, int id) {
+faction *db_read_faction(sqlite3 *db, unsigned int id) {
     int err;
     const void *data;
     err = sqlite3_reset(g_stmt_select_faction);
     if (err != SQLITE_OK) goto db_read_faction_fail;
-    err = sqlite3_bind_int(g_stmt_select_faction, 1, id);
+    err = sqlite3_bind_int64(g_stmt_select_faction, 1, (sqlite3_int64)id);
     if (err != SQLITE_OK) goto db_read_faction_fail;
     err = sqlite3_step(g_stmt_select_faction);
     if (err != SQLITE_DONE) goto db_read_faction_fail;
