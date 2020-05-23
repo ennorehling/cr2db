@@ -8,6 +8,8 @@
 
 #include <sqlite3.h>
 
+#include <stddef.h>
+
 static struct sqlite3 *config_db;
 static sqlite3_stmt *g_stmt_update_config;
 static sqlite3_stmt *g_stmt_delete_config;
@@ -39,13 +41,13 @@ const char *config_get(const char *key, const char *def)
     
     err = sqlite3_step(g_stmt_select_config);
     if (SQLITE_ROW == err) {
-        const char *result = sqlite3_column_text(g_stmt_select_config, 0);
+        const char *result = (const char *)sqlite3_column_text(g_stmt_select_config, 0);
         return result;
     }
     return def;
 }
 
-void config_set(const char *key, const char *value)
+int config_set(const char *key, const char *value)
 {
     int err;
 
@@ -58,14 +60,16 @@ void config_set(const char *key, const char *value)
         err = sqlite3_bind_null(g_stmt_update_config, 2);
     }
     err = sqlite3_step(g_stmt_update_config);
+    return err;
 }
 
-void config_delete(const char *key) {
+int config_delete(const char *key) {
     int err;
 
     err = sqlite3_reset(g_stmt_delete_config);
     err = sqlite3_bind_text(g_stmt_delete_config, 1, key, -1, SQLITE_STATIC);
     err = sqlite3_step(g_stmt_delete_config);
+    return err;
 }
 
 int config_done(void)

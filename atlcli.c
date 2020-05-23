@@ -14,7 +14,6 @@
 #include <crpat.h>
 
 #include <assert.h>
-#include <direct.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -64,7 +63,7 @@ static int parseargs(int argc, char **argv) {
 #define MAXARGS 10
 
 int eval_script(int argc, char **argv) {
-    const char * filename = argv[0];
+    const char * filename = (argc > 0) ? argv[0] : NULL;
     FILE * F = fopen(filename, "rt");
     if (F) {
         while (!feof(F)) {
@@ -84,11 +83,6 @@ int eval_script(int argc, char **argv) {
         }
     }
     return 0;
-}
-
-int db_save(sqlite3 *db, gamedata *gd) {
-    int err = SQLITE_OK;
-    return err;
 }
 
 int json_get_int(cJSON *obj, const char *key) {
@@ -372,12 +366,10 @@ int eval_command(int argc, char **argv) {
 
 int main(int argc, char **argv) {
     int err = 0, i;
-    char path[64];
 
     g_program = argv[0];
     i = parseargs(argc, argv);
 
-    _getcwd(path, 64);
     if (SQLITE_OK != (err = db_open(g_dbname, &g_db, 1))) {
         return err;
     }
