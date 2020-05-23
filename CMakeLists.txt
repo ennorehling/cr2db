@@ -87,6 +87,6 @@ elseif (APPLE)
     "-Wall -Wextra")
 else (MSVC)
   set_target_properties (${TARGETS} PROPERTIES COMPILE_FLAGS 
-    "-Wall -Wextra -Wno-return-local-addr")
+    "-Wall -Wextra")
 endif(MSVC)
 
