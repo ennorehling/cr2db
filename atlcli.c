@@ -63,23 +63,26 @@ static int parseargs(int argc, char **argv) {
 #define MAXARGS 10
 
 int eval_script(int argc, char **argv) {
-    const char * filename = (argc > 0) ? argv[0] : NULL;
-    FILE * F = fopen(filename, "rt");
-    if (F) {
-        while (!feof(F)) {
-            char line[80];
-            char *av[MAXARGS], *tok;
-            int ac = 0, err;
-            fgets(line, sizeof(line), F);
-            tok = strtok(line, " \n");
-            while (tok && ac < MAXARGS) {
-                av[ac++] = tok;
-                tok = strtok(NULL, " \n");
+    if (argc > 0) {
+        const char * filename = argv[0];
+        FILE * F = fopen(filename, "rt");
+        if (F) {
+            while (!feof(F)) {
+                char line[80];
+                char *av[MAXARGS], *tok;
+                int ac = 0, err;
+                fgets(line, sizeof(line), F);
+                tok = strtok(line, " \n");
+                while (tok && ac < MAXARGS) {
+                    av[ac++] = tok;
+                    tok = strtok(NULL, " \n");
+                }
+                err = eval_command(ac, av);
+                if (err) {
+                    return err;
+                }
             }
-            err = eval_command(ac, av);
-            if (err) {
-                return err;
-            }
+            fclose(F);
         }
     }
     return 0;

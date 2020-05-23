@@ -166,7 +166,7 @@ static int db_prepare(sqlite3 *db) {
 
 static int db_install(sqlite3 *db, const char *schema) {
     FILE *F = NULL;
-    int err, version = 0;
+    int err;
 
     F = fopen(schema, "rb");
     if (F) {
@@ -212,6 +212,8 @@ static int db_upgrade(sqlite3 *db, int from_version, int to_version) {
 
 static int cb_int_col(void *data, int ncols, char **text, char **name) {
     int *p_int = (int *)data;
+    (void)ncols;
+    (void)name;
     *p_int = atoi(text[0]);
     return SQLITE_OK;
 }

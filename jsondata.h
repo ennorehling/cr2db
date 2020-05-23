@@ -64,27 +64,27 @@ struct gamedata *game_create(void);
 void game_free(struct gamedata *gd);
 
 struct faction *faction_create(struct cJSON *data);
-struct faction *faction_get(struct gamedata *gd, int id);
+struct faction *faction_get(struct gamedata *gd, unsigned int id);
 void faction_update(struct faction *f, struct cJSON *data);
 void faction_add(struct gamedata *gd, faction *f);
 
 struct region *region_create(struct cJSON *data);
-struct region *region_get(struct gamedata *gd, int id);
+struct region *region_get(struct gamedata *gd, unsigned int id);
 void region_update(struct region *r, struct cJSON *data);
 void region_add(struct gamedata *gd, region *r);
 
 struct ship *ship_create(struct region *r, struct cJSON *data);
-struct ship *ship_get(struct gamedata *gd, int id, const struct region *r);
+struct ship *ship_get(struct gamedata *gd, unsigned int id, const struct region *r);
 void ship_update(struct ship *s, struct cJSON *data);
 void ship_add(struct gamedata *gd, ship *s);
 
 struct building *building_create(struct region *r, struct cJSON *data);
-struct building *building_get(struct gamedata *gd, int id, const struct region *r);
+struct building *building_get(struct gamedata *gd, unsigned int id, const struct region *r);
 void building_update(struct building *b, struct cJSON *data);
 void building_add(struct gamedata *gd, building *b);
 
 struct unit *unit_create(struct region *r, struct cJSON *data);
-struct unit *unit_get(struct gamedata *gd, int id, const struct region *r);
+struct unit *unit_get(struct gamedata *gd, unsigned int id, const struct region *r);
 void unit_update(struct unit *u, struct cJSON *data);
 void unit_add(struct gamedata *gd, unit *u);
 

@@ -112,7 +112,7 @@ void faction_update(faction *f, cJSON *data)
     f->data = data;
 }
 
-faction *faction_get(gamedata *gd, int id)
+faction *faction_get(gamedata *gd, unsigned int id)
 {
     faction *f;
     for (f = gd->factions; f != NULL; f = f->next) {
