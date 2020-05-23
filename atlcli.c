@@ -106,7 +106,7 @@ static int merge_faction(gamedata *gd, cJSON *obj, bool is_new) {
         }
     }
     else if (is_new) {
-        faction_update(f, f->data);
+        faction_update(f, obj);
     }
     else {
         return 0;
