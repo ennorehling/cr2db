@@ -63,7 +63,10 @@ faction *db_read_faction(sqlite3 *db, unsigned int id) {
     err = sqlite3_bind_int64(g_stmt_select_faction, 1, (sqlite3_int64)id);
     if (err != SQLITE_OK) goto db_read_faction_fail;
     err = sqlite3_step(g_stmt_select_faction);
-    if (err != SQLITE_DONE) goto db_read_faction_fail;
+    if (err == SQLITE_DONE) {
+        return NULL;
+    }
+    else if (err != SQLITE_ROW) goto db_read_faction_fail;
     data = sqlite3_column_blob(g_stmt_select_faction, 0);
     if (data) {
         cJSON *json = cJSON_Parse(data);
