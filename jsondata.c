@@ -91,7 +91,6 @@ void faction_add(struct gamedata *gd, faction *f) {
 void faction_update(faction *f, cJSON *data)
 {
     cJSON *child;
-    cJSON_Delete(f->data);
     for (child = data->child; child; child = child->next) {
         if (child->type == cJSON_Number) {
             if (strcmp(child->string, "id") == 0) {
@@ -100,13 +99,16 @@ void faction_update(faction *f, cJSON *data)
         }
         else if (child->type == cJSON_String) {
             if (strcmp(child->string, "Parteiname") == 0) {
+                free(f->name);
                 f->name = str_strdup(child->valuestring);
             }
             else if (strcmp(child->string, "email") == 0) {
+                free(f->email);
                 f->email = str_strdup(child->valuestring);
             }
         }
     }
+    cJSON_Delete(f->data);
     f->data = data;
 }
 
