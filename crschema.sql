@@ -1,5 +1,3 @@
-PRAGMA user_version = 1;
-
 DROP TABLE IF EXISTS config;
 CREATE TABLE config (
     key TEXT PRIMARY KEY NOT NULL,
@@ -8,14 +6,15 @@ CREATE TABLE config (
 
 DROP TABLE IF EXISTS regions;
 CREATE TABLE regions (
-    id INT PRIMARY KEY NOT NULL,
     x INT NOT NULL,
     y INT NOT NULL,
     p INT NOT NULL,
+    id INT,
     name TEXT,
     terrain TEXT,
     data BLOB
 );
+CREATE UNIQUE INDEX IF NOT EXISTS regions_xyp ON regions (x, y, p);
 
 DROP TABLE IF EXISTS factions;
 CREATE TABLE factions (
@@ -58,3 +57,5 @@ CREATE TABLE units (
     FOREIGN KEY(building_id) REFERENCES buildings(id),
     FOREIGN KEY(region_id) REFERENCES regions(id)
 );
+
+PRAGMA user_version = 1;
