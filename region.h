@@ -13,7 +13,6 @@ typedef struct region {
     struct building *buildings;
     struct ship *ships;
     struct unit *units;
-    int turn;
     struct cJSON *data;
     struct region *next;
 } region;

@@ -105,6 +105,7 @@ static int merge_faction(gamedata *gd, cJSON *obj, bool is_new) {
     f = faction_get(gd, id);
     if (f == NULL) {
         f = faction_create(gd, obj);
+        faction_update(gd, f, obj);
     }
     else if (is_new) {
         faction_update(gd, f, obj);
@@ -399,11 +400,6 @@ static int import_cr(int argc, char **argv) {
         json = crfile_read(F, filename);
         if (json) {
             int game_turn;
-
-            if (!g_db) {
-                err = sqlite3_open(g_dbname, &g_db);
-                if (err != SQLITE_OK) goto fail;
-            }
             game_turn = atoi(config_get("turn", "0"));
             gd_merge(gd, game_turn, json);
         }
@@ -413,14 +409,6 @@ static int import_cr(int argc, char **argv) {
         fclose(F);
     }
     return 0;
-fail:
-    if (json) {
-        cJSON_Delete(json);
-    }
-    if (F && F != stdin) {
-        fclose(F);
-    }
-    return err;
 }
 
 int eval_command(int argc, char **argv) {

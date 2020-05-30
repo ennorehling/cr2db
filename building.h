@@ -1,5 +1,7 @@
 #pragma once
 
+struct region;
+
 typedef struct building {
     unsigned int id;
     struct region *region;
@@ -8,3 +10,5 @@ typedef struct building {
     struct cJSON *data;
     struct building *next;
 } building;
+
+void free_building(building *b);

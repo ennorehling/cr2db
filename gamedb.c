@@ -354,16 +354,14 @@ int db_write_region(struct sqlite3 *db, const struct region *r) {
     if (err != SQLITE_OK) goto db_write_region_fail;
     err = sqlite3_bind_int(g_stmt_insert_region, 5, r->plane);
     if (err != SQLITE_OK) goto db_write_region_fail;
-    err = sqlite3_bind_int(g_stmt_insert_region, 6, r->turn);
-    if (err != SQLITE_OK) goto db_write_region_fail;
     if (r->name) {
-        err = sqlite3_bind_text(g_stmt_insert_region, 7, r->name, -1, SQLITE_STATIC);
+        err = sqlite3_bind_text(g_stmt_insert_region, 6, r->name, -1, SQLITE_STATIC);
     }
     else {
-        err = sqlite3_bind_null(g_stmt_insert_region, 7);
+        err = sqlite3_bind_null(g_stmt_insert_region, 6);
     }
     if (err != SQLITE_OK) goto db_write_region_fail;
-    err = sqlite3_bind_text(g_stmt_insert_region, 8, terrainname[r->terrain], -1, SQLITE_STATIC);
+    err = sqlite3_bind_text(g_stmt_insert_region, 7, terrainname[r->terrain], -1, SQLITE_STATIC);
     if (err != SQLITE_OK) goto db_write_region_fail;
 
     err = sqlite3_step(g_stmt_insert_region);

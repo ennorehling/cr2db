@@ -53,7 +53,7 @@ static void update_faction(gamedata *gd, faction *f, cJSON *data)
         cJSON *child;
         for (child = data->child; child; child = child->next) {
             if (child->type == cJSON_Number) {
-                if (f->id == 0 && (child->string, "id") == 0) {
+                if (f->id == 0 && strcmp(child->string, "id") == 0) {
                     f->id = child->valueint;
                 }
             }
@@ -200,14 +200,14 @@ int region_update(gamedata *gd, region *r, cJSON *data)
 int region_delete_objects(struct gamedata *gd, struct region *r)
 {
     while (r->buildings) {
-        building *s = r->buildings;
-        r->buildings = s->next;
-        free_building(s);
+        building *c = r->buildings;
+        r->buildings = c->next;
+        free_building(c);
     }
     while (r->ships) {
-        ship *s = r->ships;
-        r->ships = s->next;
-        free_ship(s);
+        ship *c = r->ships;
+        r->ships = c->next;
+        free_ship(c);
     }
     while (r->units) {
         unit *u = r->units;

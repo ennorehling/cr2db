@@ -1,2 +1,3 @@
-import-cr sample.cr
+import-cr 1-sample.cr
+import-cr 2-sample.cr
 #export-cr export.cr
