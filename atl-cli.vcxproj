@@ -106,6 +106,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="atlcli.c" />
+    <ClCompile Include="building.c" />
     <ClCompile Include="cjson\cJSON.c" />
     <ClCompile Include="clibs\critbit.c" />
     <ClCompile Include="clibs\format.c" />
@@ -116,11 +117,16 @@
     <ClCompile Include="crdata.c" />
     <ClCompile Include="crfile.c" />
     <ClCompile Include="crpat\crpat.c" />
+    <ClCompile Include="faction.c" />
     <ClCompile Include="gamedb.c" />
     <ClCompile Include="jsondata.c" />
     <ClCompile Include="log.c" />
+    <ClCompile Include="region.c" />
+    <ClCompile Include="ship.c" />
+    <ClCompile Include="unit.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="building.h" />
     <ClInclude Include="cgi.h" />
     <ClInclude Include="cjson\cJSON.h" />
     <ClInclude Include="cjson\cJSON_Utils.h" />
@@ -135,11 +141,18 @@
     <ClInclude Include="crdata.h" />
     <ClInclude Include="crfile.h" />
     <ClInclude Include="crpat\crpat.h" />
+    <ClInclude Include="faction.h" />
     <ClInclude Include="gamedb.h" />
     <ClInclude Include="gettext.h" />
     <ClInclude Include="jsondata.h" />
     <ClInclude Include="log.h" />
+    <ClInclude Include="region.h" />
     <ClInclude Include="request.h" />
+    <ClInclude Include="ship.h" />
+    <ClInclude Include="unit.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="crschema.sql" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

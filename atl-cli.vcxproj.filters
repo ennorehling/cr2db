@@ -57,6 +57,21 @@
     <ClCompile Include="crpat\crpat.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="faction.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="region.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="building.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ship.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="unit.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cgi.h">
@@ -116,5 +131,25 @@
     <ClInclude Include="crpat\crpat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="faction.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="region.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="building.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ship.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="unit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="crschema.sql">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

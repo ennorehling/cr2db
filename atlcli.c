@@ -8,6 +8,8 @@
 #include "config.h"
 #include "jsondata.h"
 #include "gamedb.h"
+#include "region.h"
+#include "faction.h"
 
 #include <cJSON.h>
 #include <sqlite3.h>
@@ -19,6 +21,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
+#define SCHEMA_VERSION 2
 
 static sqlite3 * g_db;
 static const char *g_dbname = ":memory:";
@@ -93,31 +97,17 @@ int json_get_int(cJSON *obj, const char *key) {
     return child->valueint;
 }
 
-faction *load_faction(gamedata *gd, unsigned int id) {
-    faction *f = faction_get(gd, id);
-    if (f == NULL) {
-        f = db_read_faction(g_db, id);
-        if (f) {
-            faction_add(gd, f);
-        }
-    }
-    return f;
-}
-
 static int merge_faction(gamedata *gd, cJSON *obj, bool is_new) {
-    faction *f;
     int id;
+    faction *f;
     assert(obj->type == cJSON_Object);
     id = json_get_int(obj, "id");
-    f = load_faction(gd, id);
+    f = faction_get(gd, id);
     if (f == NULL) {
-        f = faction_create(obj);
-        if (f != NULL) {
-            faction_add(gd, f);
-        }
+        f = faction_create(gd, obj);
     }
     else if (is_new) {
-        faction_update(f, obj);
+        faction_update(gd, f, obj);
     }
     else {
         return 0;
@@ -132,6 +122,153 @@ static int merge_factions(gamedata *gd, cJSON *arr, bool is_new) {
     for (child = arr->child; child; child = child->next) {
         assert(child->type == cJSON_Object);
         err = merge_faction(gd, child, is_new);
+        if (err != SQLITE_OK) break;
+    }
+    return err;
+}
+
+static int merge_region(gamedata *gd, cJSON *obj, bool is_new) {
+    int id = 0, x, y, z = 0;
+    cJSON **p_child = &obj->child;
+    cJSON **jUnits = NULL;
+    cJSON **jShips = NULL;
+    cJSON **jBuildings = NULL;
+    cJSON *jResources = NULL;
+    cJSON *jPrices = NULL;
+    cJSON *jBorders = NULL;
+    region *r, *orig;
+    assert(obj->type == cJSON_Object);
+    while (*p_child) {
+        cJSON * child = *p_child;
+        if (child->type == cJSON_Object) {
+            if (strcmp("PREISE", child->string) == 0) {
+                jPrices = child;
+            }
+        }
+        else if (child->type == cJSON_Array) {
+            if (!jUnits && strcmp("EINHEIT", child->string) == 0) {
+                jUnits = p_child;
+            }
+            else if (!jBuildings && strcmp("BURG", child->string) == 0) {
+                jBuildings = p_child;
+            }
+            else if (!jShips && strcmp("SCHIFF", child->string) == 0) {
+                jShips = p_child;
+            }
+            else if (!jResources && strcmp("RESOURCE", child->string) == 0) {
+                jResources = child;
+            }
+            else if (!jBorders && strcmp("GRENZE", child->string) == 0) {
+                jBorders = child;
+            }
+        }
+        else if (child->type == cJSON_Number) {
+            if (id == 0 && strcmp("id", child->string) == 0) {
+                id = child->valueint;
+            }
+            else if (strcmp("x", child->string) == 0) {
+                x = child->valueint;
+            }
+            else if (strcmp("y", child->string) == 0) {
+                y = child->valueint;
+            }
+            else if (strcmp("z", child->string) == 0) {
+                z = child->valueint;
+            }
+        }
+        p_child = &child->next;
+    }
+    r = region_create(gd, obj);
+    if (r) {
+        if (is_new) {
+            if (jPrices) {
+                /* remove old ships, buildings, units in this region */
+                region_delete_objects(gd, r);
+            }
+        }
+        else if (jResources == NULL || jPrices == NULL || jBorders == NULL) {
+            orig = region_get(gd, x, y, z);
+            if (orig) {
+                /* Copy prices, resources, borders */
+                p_child = &orig->data->child;
+                while (*p_child) {
+                    cJSON *child = *p_child;
+                    if (child->type == cJSON_Object) {
+                        if (jPrices == NULL && strcmp("PREISE", child->string) == 0) {
+                            cJSON *next = child->next;
+                            r->data->child = child;
+                            child->next = *p_child;
+                            *p_child = next;
+                            jPrices = r->data->child;
+                            continue;
+                        }
+                    }
+                    else if (child->type == cJSON_Array) {
+                        if (jBorders == NULL && strcmp("GRENZE", child->string) == 0) {
+                            cJSON *next = child->next;
+                            r->data->child = child;
+                            child->next = *p_child;
+                            *p_child = next;
+                            jBorders = r->data->child;
+                            continue;
+                        }
+                        else if (jResources == NULL && strcmp("RESOURCE", child->string) == 0) {
+                            cJSON *next = child->next;
+                            r->data->child = child;
+                            child->next = *p_child;
+                            *p_child = next;
+                            jResources = r->data->child;
+                            continue;
+                        }
+                    }
+                    p_child = &child->next;
+                }
+            }
+        }
+        /* TODO: save buildings, ship, units */
+        if (jShips) {
+            cJSON *child = *jShips;
+            *jShips = child->next;
+            /* insert new ships */
+            while (child) {
+                ship_create(gd, r, child);
+                child = child->next;
+            }
+            cJSON_Delete(child);
+        }
+        if (jBuildings) {
+            cJSON *child = *jBuildings;
+            *jBuildings = child->next;
+            /* insert new buildings */
+            while (child) {
+                building_create(gd, r, child);
+                child = child->next;
+            }
+            cJSON_Delete(child);
+        }
+        if (jUnits) {
+            cJSON *child = *jUnits;
+            *jUnits = child->next;
+            /* save new units */
+            while (child) {
+                unit_create(gd, r, child);
+                child = child->next;
+            }
+            cJSON_Delete(child);
+        }
+        return region_update(gd, r, NULL);
+    }
+    /* TODO: error reporting (probably OOM) */
+    return -1;
+}
+
+static int merge_regions(gamedata *gd, cJSON *arr, bool is_new) {
+    int err = SQLITE_OK;
+    cJSON *child;
+    assert(arr->type == cJSON_Array);
+    for (child = arr->child; child; child = child->next) {
+        assert(child->type == cJSON_Object);
+        err = merge_region(gd, child, is_new);
         if (err != SQLITE_OK) break;
     }
     return err;
@@ -212,67 +349,6 @@ static int merge_units(gamedata *gd, cJSON *arr, struct region *r) {
     }
     return err;
 }
-
-static int merge_region(gamedata *gd, cJSON *obj, int turn) {
-    cJSON **p_child = &obj->child;
-    cJSON *jUnits = NULL;
-    cJSON *jShips = NULL;
-    cJSON *jBuildings = NULL;
-    region *r, *orig;
-    assert(obj->type == cJSON_Object);
-    while (*p_child) {
-        cJSON * child = *p_child;
-        if (child->type == cJSON_Array) {
-            if (strcmp("EINHEIT", child->string) == 0) {
-                jUnits = child;
-                *p_child = child->next;
-                continue;
-            }
-            else if (strcmp("BURG", child->string) == 0) {
-                jBuildings = child;
-                *p_child = child->next;
-                continue;
-            }
-            else if (strcmp("SCHIFF", child->string) == 0) {
-                jShips = child;
-                *p_child = child->next;
-                continue;
-            }
-        }
-        p_child = &child->next;
-    }
-    r = region_create(obj);
-    if (r) {
-        // TODO: this is leaking the arrays!
-        if (jShips) {
-            merge_ships(gd, jShips, r);
-        }
-        if (jBuildings) {
-            merge_buildings(gd, jBuildings, r);
-        }
-        if (jUnits) {
-            merge_units(gd, jUnits, r);
-        }
-        orig = region_get(gd, r->id);
-        if (orig) {
-            // TODO: merge the two depending on turn
-        }
-        return db_write_region(g_db, r);
-    }
-    return -1;
-}
-
-static int merge_regions(gamedata *gd, cJSON *arr, int turn) {
-    int err = SQLITE_OK;
-    cJSON *child;
-    assert(arr->type == cJSON_Array);
-    for (child = arr->child; child; child = child->next) {
-        assert(child->type == cJSON_Object);
-        err = merge_region(gd, child, turn);
-        if (err != SQLITE_OK) break;
-    }
-    return err;
-}
 */
 
 int gd_merge(gamedata *gd, int game_turn, cJSON *json) {
@@ -291,10 +367,8 @@ int gd_merge(gamedata *gd, int game_turn, cJSON *json) {
                  if (err != SQLITE_OK) break;
             }
             else if (0 == strcmp(child->string, "REGION")) {
-/*
                 err = merge_regions(gd, child, turn >= game_turn);
                 if (err != SQLITE_OK) break;
-*/
             }
         }
     }
@@ -320,7 +394,7 @@ static int import_cr(int argc, char **argv) {
             return errno;
         }
     }
-    gd = game_create();
+    gd = game_create(g_db);
     if (gd) {
         json = crfile_read(F, filename);
         if (json) {
@@ -384,7 +458,7 @@ int main(int argc, char **argv) {
     g_program = argv[0];
     i = parseargs(argc, argv);
 
-    if (SQLITE_OK != (err = db_open(g_dbname, &g_db, 1))) {
+    if (SQLITE_OK != (err = db_open(g_dbname, &g_db, SCHEMA_VERSION))) {
         return err;
     }
 

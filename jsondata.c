@@ -1,5 +1,12 @@
 #include "jsondata.h"
 
+#include "gamedb.h"
+#include "faction.h"
+#include "region.h"
+#include "unit.h"
+#include "ship.h"
+#include "building.h"
+
 #include <strings.h>
 
 #include <assert.h>
@@ -7,25 +14,22 @@
 #include <string.h>
 #include <cJSON.h>
 
-#define MAXTERRAINS 32
 #define MAXRACES 64
-
-char *terrainname[MAXTERRAINS];
-static int num_terrains;
-
 char *racename[MAXRACES];
 static int num_races;
 
+struct gamedata {
+    struct sqlite3 *db;
+    region *regions;
+    faction *factions;
+};
+
 void jsondata_init(void) {
-    num_terrains = 0;
-    num_races = 0;
 }
 
 void jsondata_done(void) {
+    free_terrains();
     int i;
-    for (i = 0; i != num_terrains; ++i) {
-        free(terrainname[i]);
-    }
     for (i = 0; i != num_races; ++i) {
         free(racename[i]);
     }
@@ -43,73 +47,54 @@ static int race_get(const char *name) {
     return num_races++;
 }
 
-static int terrain_get(const char *name) {
-    int i;
-    for (i = 0; i != num_terrains; ++i) {
-        if (strcmp(name, terrainname[i]) == 0) {
-            return i;
-        }
-    }
-    assert(num_terrains < MAXTERRAINS);
-    terrainname[num_terrains] = str_strdup(name);
-    return num_terrains++;
-}
-
-struct gamedata {
-    struct region *regions;
-    struct faction *factions;
-};
-
-static void faction_free(faction *f) {
-    cJSON_Delete(f->data);
-    free(f->name);
-    free(f->email);
-    free(f);
-}
-
-faction *faction_create(cJSON *data)
+static void update_faction(gamedata *gd, faction *f, cJSON *data)
 {
-    faction * f = calloc(1, sizeof(faction));
-    if (f) {
-        faction_update(f, data);
+    if (f->data != data) {
+        cJSON *child;
+        for (child = data->child; child; child = child->next) {
+            if (child->type == cJSON_Number) {
+                if (f->id == 0 && (child->string, "id") == 0) {
+                    f->id = child->valueint;
+                }
+            }
+            else if (child->type == cJSON_String) {
+                if (strcmp(child->string, "Parteiname") == 0) {
+                    free(f->name);
+                    f->name = str_strdup(child->valuestring);
+                }
+                else if (strcmp(child->string, "email") == 0) {
+                    free(f->email);
+                    f->email = str_strdup(child->valuestring);
+                }
+            }
+        }
+        cJSON_Delete(f->data);
+        f->data = data;
     }
-    return f;
 }
 
-void faction_add(struct gamedata *gd, faction *f) {
-    faction **fiter = &gd->factions;
+static void faction_add(gamedata *gd, faction *f) {
+    faction **iter = &gd->factions;
     assert(f->next == NULL);
-    while (*fiter) {
-        if ((*fiter)->id > f->id) {
-            f->next = *fiter;
-            *fiter = f;
+    while (*iter) {
+        faction *ff = *iter;
+        if (ff->id == ff->id) {
+            f->next = ff;
+            *iter = f;
             break;
         }
     }
 }
 
-void faction_update(faction *f, cJSON *data)
+faction *faction_create(gamedata *gd, cJSON *data)
 {
-    cJSON *child;
-    for (child = data->child; child; child = child->next) {
-        if (child->type == cJSON_Number) {
-            if (strcmp(child->string, "id") == 0) {
-                f->id = child->valueint;
-            }
-        }
-        else if (child->type == cJSON_String) {
-            if (strcmp(child->string, "Parteiname") == 0) {
-                free(f->name);
-                f->name = str_strdup(child->valuestring);
-            }
-            else if (strcmp(child->string, "email") == 0) {
-                free(f->email);
-                f->email = str_strdup(child->valuestring);
-            }
-        }
+    faction * f = create_faction(NULL);
+    if (f) {
+        update_faction(gd, f, data);
+        faction_add(gd, f);
+        db_write_faction(gd->db, f);
     }
-    cJSON_Delete(f->data);
-    f->data = data;
+    return f;
 }
 
 faction *faction_get(gamedata *gd, unsigned int id)
@@ -120,22 +105,25 @@ faction *faction_get(gamedata *gd, unsigned int id)
             return f;
         }
     }
-    return NULL;
+    f = db_read_faction(gd->db, id);
+    if (f) {
+        faction_add(gd, f);
+    }
+    return f;
 }
 
-static void region_free(region *r) {
-    cJSON_Delete(r->data);
-    free(r->name);
-    free(r);
+void faction_update(gamedata *gd, faction *f, cJSON *data)
+{
+    update_faction(gd, f, data);
+    db_write_faction(gd->db, f);
 }
 
-/*
-region *region_create(cJSON *data) {
-    region *r = calloc(1, sizeof(region));
-    if (r) {
+static void update_region(gamedata *gd, region *r, cJSON *data)
+{
+    if (r->data != data) {
         cJSON * child;
         for (child = data->child; child != NULL; child = child->next) {
-            if (child->type == cJSON_Number) {
+            if (r->id == 0 && child->type == cJSON_Number) {
                 if (strcmp(child->string, "id") == 0) {
                     r->id = child->valueint;
                 }
@@ -154,38 +142,116 @@ region *region_create(cJSON *data) {
                     r->name = str_strdup(child->valuestring);
                 }
                 if (strcmp(child->string, "Terrain") == 0) {
-                    r->terrain = terrain_get(child->valuestring);
+                    r->terrain = get_terrain(child->valuestring);
                 }
             }
         }
+        cJSON_Delete(r->data);
         r->data = data;
+    }
+}
+
+static void region_add(gamedata *gd, region *r) {
+    region **iter = &gd->regions;
+    assert(r->next == NULL);
+    while (*iter) {
+        region *rr = *iter;
+        if (r->x == rr->x && r->y == rr->y && r->plane == rr->plane) {
+            r->next = rr;
+            *iter = r;
+            break;
+        }
+    }
+}
+
+region *region_create(gamedata *gd, cJSON *data) {
+    region *r = create_region(NULL);
+    if (r) {
+        update_region(gd, r, data);
+        region_add(gd, r);
+        db_write_region(gd->db, r);
     }
     return r;
 }
 
-region *region_get(struct gamedata *gd, int id) {
+region *region_get(gamedata *gd, int x, int y, int z) {
     region *r;
     for (r = gd->regions; r; r = r->next) {
-        if (r->id == id) return r;
+        if (r->x == x && r->y == y && r->plane == z) {
+            return r;
+        }
     }
+    r = db_read_region(gd->db, x, y, z);
+    if (r) {
+        /* TODO: we have already iterated the list to where this insert should take place: */
+        region_add(gd, r);
+    }
+    return r;
+}
+
+int region_update(gamedata *gd, region *r, cJSON *data)
+{
+    if (data) {
+        update_region(gd, r, data);
+    }
+    return db_write_region(gd->db, r);
+}
+
+int region_delete_objects(struct gamedata *gd, struct region *r)
+{
+    while (r->buildings) {
+        building *s = r->buildings;
+        r->buildings = s->next;
+        free_building(s);
+    }
+    while (r->ships) {
+        ship *s = r->ships;
+        r->ships = s->next;
+        free_ship(s);
+    }
+    while (r->units) {
+        unit *u = r->units;
+        r->units = u->next;
+        free_unit(u);
+    }
+    return db_region_delete_objects(gd->db, r->id);
+}
+
+struct unit *unit_create(struct gamedata *gd, struct region *r, struct cJSON *data)
+{
+    unit * u = create_unit(data);
+    if (u) {
+        u->region = r;
+    }
+    return u;
+}
+
+struct ship *ship_create(struct gamedata *gd, struct region *r, struct cJSON *data)
+{
     return NULL;
 }
 
-struct cJSON *region_get_child(const struct region *r, const char *key) {
+struct building *building_create(struct gamedata *gd, struct region *r, struct cJSON *data)
+{
+    return NULL;
+}
+
+/*
+cJSON *region_get_child(const region *r, const char *key) {
     return cJSON_GetObjectItem(r->data, key);
 }
 
-const char *region_get_str(const struct region *r, const char *key, const char *def) {
+const char *region_get_str(const region *r, const char *key, const char *def) {
     cJSON *child = region_get_child(r, key);
     return child ? child->valuestring : def;
 }
 
-int region_get_int(const struct region *r, const char *key, int def) {
+int region_get_int(const region *r, const char *key, int def) {
     cJSON *child = region_get_child(r, key);
     return child ? child->valueint : def;
 }
 
-struct unit *unit_create(struct region *r, struct cJSON *data) {
+unit *unit_create(region *r, cJSON *data) {
     unit * u = calloc(1, sizeof(unit));
     if (u) {
         cJSON * child;
@@ -232,7 +298,7 @@ struct unit *unit_create(struct region *r, struct cJSON *data) {
     return u;
 }
 
-struct unit *unit_get(struct gamedata *gd, int id, const region *r) {
+unit *unit_get(gamedata *gd, int id, const region *r) {
     if (r) {
         unit *u;
         for (u = r->units; u; u = u->next) {
@@ -337,22 +403,26 @@ building *building_get(gamedata *gd, int id, const region *r) {
 }
 
 */
-gamedata *game_create(void) {
+
+
+gamedata *game_create(struct sqlite3 *db) {
     gamedata *gd = malloc(sizeof(gamedata));
+    gd->db = db;
     gd->regions = NULL;
     gd->factions = NULL;
     return gd;
 }
 
 void game_free(gamedata *gd) {
+    gd->db = NULL;
     while (gd->factions) {
         faction *f = gd->factions;
         gd->factions = f->next;
-        faction_free(f);
+        free_faction(f);
     }
     while (gd->regions) {
         region *r = gd->regions;
         gd->regions = r->next;
-        region_free(r);
+        free_region(r);
     }
 }

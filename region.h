@@ -22,5 +22,4 @@ int get_terrain(const char *name);
 void free_terrains(void);
 
 region *create_region(struct cJSON *data);
-void update_region(region *r, struct cJSON *data);
 void free_region(region *r);

@@ -6,15 +6,16 @@ CREATE TABLE config (
 
 DROP TABLE IF EXISTS regions;
 CREATE TABLE regions (
+    id INT PRIMARY KEY,
     x INT NOT NULL,
     y INT NOT NULL,
-    p INT NOT NULL,
-    id INT,
+    z INT NOT NULL,
     name TEXT,
     terrain TEXT,
     data BLOB
 );
-CREATE UNIQUE INDEX IF NOT EXISTS regions_xyp ON regions (x, y, p);
+CREATE UNIQUE INDEX IF NOT EXISTS regions_xyp ON regions (x, y, z);
+CREATE INDEX IF NOT EXISTS regions_id ON regions (id);
 
 DROP TABLE IF EXISTS factions;
 CREATE TABLE factions (

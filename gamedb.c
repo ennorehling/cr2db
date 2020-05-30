@@ -6,7 +6,10 @@
 
 #include "gamedb.h"
 #include "jsondata.h"
+#include "faction.h"
+#include "region.h"
 
+#include <strings.h>
 #include <cJSON.h>
 #include <sqlite3.h>
 
@@ -17,6 +20,8 @@
 
 static sqlite3_stmt *g_stmt_insert_faction;
 static sqlite3_stmt *g_stmt_select_faction;
+static sqlite3_stmt *g_stmt_insert_region;
+static sqlite3_stmt *g_stmt_select_region;
 
 static int db_bind_json(sqlite3_stmt *stmt, int index, cJSON *object) {
     int err;
@@ -58,6 +63,7 @@ db_write_faction_fail:
 faction *db_read_faction(sqlite3 *db, unsigned int id) {
     int err;
     const void *data;
+
     err = sqlite3_reset(g_stmt_select_faction);
     if (err != SQLITE_OK) goto db_read_faction_fail;
     err = sqlite3_bind_int64(g_stmt_select_faction, 1, (sqlite3_int64)id);
@@ -71,7 +77,13 @@ faction *db_read_faction(sqlite3 *db, unsigned int id) {
     if (data) {
         cJSON *json = cJSON_Parse(data);
         if (json) {
-            return faction_create(json);
+            faction *f = create_faction(json);
+            if (f) {
+                f->id = id;
+                f->name = str_strdup(sqlite3_column_text(g_stmt_select_faction, 1));
+                f->email = str_strdup(sqlite3_column_text(g_stmt_select_faction, 2));
+            }
+            return f;
         }
     }
     return NULL;
@@ -85,61 +97,6 @@ db_read_faction_fail:
 static sqlite3_stmt *g_stmt_insert_unit;
 static sqlite3_stmt *g_stmt_insert_ship;
 static sqlite3_stmt *g_stmt_insert_building;
-static sqlite3_stmt *g_stmt_insert_region;
-*/
-
-/*
-static int cb_load_faction(void *udata, int ncols, char **text, char **name) {
-    gamedata *gd = (gamedata *)udata;
-    cJSON *json = cJSON_Parse(text[0]);
-    faction *f = faction_create(json);
-    faction_add(gd, f);
-    return SQLITE_OK;
-}
-
-static int cb_load_region(void *udata, int ncols, char **text, char **name) {
-    gamedata *gd = (gamedata *)udata;
-    cJSON *json = cJSON_Parse(text[0]);
-    region_create(gd, json);
-    return SQLITE_OK;
-}
-
-static int cb_load_ship(void *udata, int ncols, char **text, char **name) {
-    gamedata *gd = (gamedata *)udata;
-    cJSON *json = cJSON_Parse(text[0]);
-    int region_id = atoi(text[1]);
-    region * r = region_get(gd, region_id);
-    ship_create(gd, r, json);
-    return SQLITE_OK;
-}
-
-static int cb_load_building(void *udata, int ncols, char **text, char **name) {
-    gamedata *gd = (gamedata *)udata;
-    cJSON *json = cJSON_Parse(text[0]);
-    int region_id = atoi(text[1]);
-    region * r = region_get(gd, region_id);
-    building_create(gd, r, json);
-    return SQLITE_OK;
-}
-
-static int cb_load_unit(void *udata, int ncols, char **text, char **name) {
-    gamedata *gd = (gamedata *)udata;
-    cJSON *json = cJSON_Parse(text[0]);
-    int region_id = atoi(text[1]);
-    region * r = region_get(gd, region_id);
-    unit_create(gd, r, json);
-    return SQLITE_OK;
-}
-
-int db_load(sqlite3 *db, gamedata *gd) {
-    int err = SQLITE_OK;
-    err = sqlite3_exec(db, "SELECT data FROM factions", cb_load_faction, gd, NULL);
-    err = sqlite3_exec(db, "SELECT data FROM regions", cb_load_region, gd, NULL);
-    err = sqlite3_exec(db, "SELECT data, region_id FROM ships", cb_load_ship, gd, NULL);
-    err = sqlite3_exec(db, "SELECT data, region_id FROM buildings", cb_load_building, gd, NULL);
-    err = sqlite3_exec(db, "SELECT data, region_id FROM units", cb_load_unit, gd, NULL);
-    return err;
-}
 */
 
 static int db_prepare(sqlite3 *db) {
@@ -148,15 +105,21 @@ static int db_prepare(sqlite3 *db) {
         "INSERT OR REPLACE INTO `factions` (`id`, `data`, `name`, `email`) VALUES (?,?,?,?)", -1,
         &g_stmt_insert_faction, NULL);
     err = sqlite3_prepare_v2(db,
-        "SELECT `data` FROM `factions` WHERE `id` = ?", -1,
+        "SELECT `data`, `name`, `email` FROM `factions` WHERE `id` = ?", -1,
         &g_stmt_select_faction, NULL);
+
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `regions` (`id`, `data`, `x`, `y`, `z`, `name`, `terrain`) VALUES (?,?,?,?,?,?,?)", -1,
+        &g_stmt_insert_region, NULL);
+
+    err = sqlite3_prepare_v2(db,
+        "SELECT `data`, `id`, `name`, `terrain` FROM `regions` WHERE `x` = ? AND `y` = ? AND `z` = ?", -1,
+        &g_stmt_select_region, NULL);
+
 /*
     err = sqlite3_prepare_v2(db,
         "INSERT OR REPLACE INTO `units` (`id`, `data`, `name`, `orders`, `region_id`, `faction_id`) VALUES (?,?,?,?,?,?)", -1,
         &g_stmt_insert_unit, NULL);
-    err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `regions` (`id`, `data`, `x`, `y`, `p`, `turn`, `name`, `terrain`) VALUES (?,?,?,?,?,?,?,?)", -1,
-        &g_stmt_insert_region, NULL);
     err = sqlite3_prepare_v2(db,
         "INSERT OR REPLACE INTO `ships` (`id`, `data`, `name`, `region_id`) VALUES (?,?,?,?)", -1,
         &g_stmt_insert_ship, NULL);
@@ -254,9 +217,11 @@ int db_close(sqlite3 * db) {
     g_stmt_select_faction = NULL;
     err = sqlite3_finalize(g_stmt_insert_faction);
     g_stmt_insert_faction = NULL;
-/*
     err = sqlite3_finalize(g_stmt_insert_region);
     g_stmt_insert_region = NULL;
+    err = sqlite3_finalize(g_stmt_select_region);
+    g_stmt_select_region = NULL;
+/*
     err = sqlite3_finalize(g_stmt_insert_unit);
     g_stmt_insert_unit = NULL;
     err = sqlite3_finalize(g_stmt_insert_ship);
@@ -372,6 +337,7 @@ db_write_building_fail:
     fputs(sqlite3_errmsg(db), stderr);
     return err;
 }
+*/
 
 int db_write_region(struct sqlite3 *db, const struct region *r) {
     // INSERT INTO `region` (`id`, `data`, `x`, `y`, `p`, `turn`, `name`, `terrain`) VALUES (?,?,?,?,?,?,?,?)
@@ -403,8 +369,58 @@ int db_write_region(struct sqlite3 *db, const struct region *r) {
     err = sqlite3_step(g_stmt_insert_region);
     if (err != SQLITE_DONE) goto db_write_region_fail;
     return SQLITE_OK;
+
 db_write_region_fail:
     fputs(sqlite3_errmsg(db), stderr);
     return err;
 }
-*/
+
+region *db_read_region(struct sqlite3 *db, int x, int y, int z) {
+    int err;
+    const void *data;
+
+    err = sqlite3_reset(g_stmt_select_region);
+    if (err != SQLITE_OK) goto db_read_region_fail;
+    err = sqlite3_bind_int(g_stmt_select_region, 1, x);
+    err = sqlite3_bind_int(g_stmt_select_region, 2, y);
+    err = sqlite3_bind_int(g_stmt_select_region, 3, z);
+    if (err != SQLITE_OK) goto db_read_region_fail;
+    err = sqlite3_step(g_stmt_select_region);
+    if (err == SQLITE_DONE) {
+        return NULL;
+    }
+    else if (err != SQLITE_ROW) goto db_read_region_fail;
+    data = sqlite3_column_blob(g_stmt_select_region, 0);
+    if (data) {
+        cJSON *json = cJSON_Parse(data);
+        if (json) {
+            region *r = create_region(json);
+            r->id = sqlite3_column_int(g_stmt_select_region, 1);
+            r->name = str_strdup(sqlite3_column_blob(g_stmt_select_region, 2));
+            r->terrain = get_terrain(sqlite3_column_blob(g_stmt_select_region, 3));
+            return r;
+        }
+    }
+    return NULL;
+
+db_read_region_fail:
+    fputs(sqlite3_errmsg(db), stderr);
+    return NULL;
+}
+
+int db_region_delete_objects(sqlite3 *db, unsigned int region_id)
+{
+    char zSQL[80];
+    int err;
+    sprintf(zSQL, "DELETE FROM buildings WHERE region_id=%u", region_id);
+    if (SQLITE_OK != (err = sqlite3_exec(db, zSQL, NULL, NULL, NULL))) goto db_delete_objects_fail;
+    sprintf(zSQL, "DELETE FROM ships WHERE region_id=%u", region_id);
+    if (SQLITE_OK != (err = sqlite3_exec(db, zSQL, NULL, NULL, NULL))) goto db_delete_objects_fail;
+    sprintf(zSQL, "DELETE FROM units WHERE region_id=%u", region_id);
+    if (SQLITE_OK != (err = sqlite3_exec(db, zSQL, NULL, NULL, NULL))) goto db_delete_objects_fail;
+    return err;
+
+db_delete_objects_fail:
+    fputs(sqlite3_errmsg(db), stderr);
+    return err;
+}
