@@ -26,3 +26,6 @@ int db_write_region(struct sqlite3 *db, const struct region *r);
 struct region *db_read_region(struct sqlite3 *db, int x, int y, int z);
 int db_delete_region(struct sqlite3 *db, int x, int y, int z);
 int db_region_delete_objects(struct sqlite3 *db, unsigned int region_id);
+
+int db_factions_walk(struct sqlite3 *db, int(*callback)(struct faction *, void *), void *arg);
+int db_regions_walk(struct sqlite3 *db, int(*callback)(struct region *, void *), void *arg);

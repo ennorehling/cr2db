@@ -117,8 +117,10 @@
     <ClCompile Include="crdata.c" />
     <ClCompile Include="crfile.c" />
     <ClCompile Include="crpat\crpat.c" />
+    <ClCompile Include="export.c" />
     <ClCompile Include="faction.c" />
     <ClCompile Include="gamedb.c" />
+    <ClCompile Include="import.c" />
     <ClCompile Include="jsondata.c" />
     <ClCompile Include="log.c" />
     <ClCompile Include="region.c" />
@@ -144,6 +146,7 @@
     <ClInclude Include="faction.h" />
     <ClInclude Include="gamedb.h" />
     <ClInclude Include="gettext.h" />
+    <ClInclude Include="import.h" />
     <ClInclude Include="jsondata.h" />
     <ClInclude Include="log.h" />
     <ClInclude Include="region.h" />
@@ -153,6 +156,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="crschema.sql" />
+    <None Include="export.cr" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

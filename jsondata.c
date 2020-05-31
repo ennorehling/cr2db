@@ -24,6 +24,17 @@ struct gamedata {
     faction *factions;
 };
 
+int factions_walk(struct gamedata *gd, int (*callback)(struct faction *, void *), void *arg)
+{
+    return db_factions_walk(gd->db, callback, arg);
+}
+
+int regions_walk(struct gamedata *gd, int (*callback)(struct region *, void *), void *arg)
+{
+    return db_regions_walk(gd->db, callback, arg);
+}
+
+
 void jsondata_init(void) {
 }
 
@@ -50,11 +61,16 @@ static int race_get(const char *name) {
 static void update_faction(gamedata *gd, faction *f, cJSON *data)
 {
     if (f->data != data) {
-        cJSON *child;
-        for (child = data->child; child; child = child->next) {
+        cJSON **p_child = &data->child;
+        while (*p_child) {
+            cJSON *child = *p_child;
             if (child->type == cJSON_Number) {
                 if (f->id == 0 && strcmp(child->string, "id") == 0) {
                     f->id = child->valueint;
+                    *p_child = child->next;
+                    child->next = NULL;
+                    cJSON_Delete(child);
+                    continue;
                 }
             }
             else if (child->type == cJSON_String) {
@@ -67,6 +83,7 @@ static void update_faction(gamedata *gd, faction *f, cJSON *data)
                     f->email = str_strdup(child->valuestring);
                 }
             }
+            p_child = &child->next;
         }
         cJSON_Delete(f->data);
         f->data = data;
@@ -403,8 +420,6 @@ building *building_get(gamedata *gd, int id, const region *r) {
 }
 
 */
-
-
 gamedata *game_create(struct sqlite3 *db) {
     gamedata *gd = malloc(sizeof(gamedata));
     gd->db = db;
@@ -419,10 +434,12 @@ void game_free(gamedata *gd) {
         faction *f = gd->factions;
         gd->factions = f->next;
         free_faction(f);
+        free(f);
     }
     while (gd->regions) {
         region *r = gd->regions;
         gd->regions = r->next;
         free_region(r);
+        free(r);
     }
 }

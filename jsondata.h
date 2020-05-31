@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 struct cJSON;
 struct sqlite3;
 
@@ -13,6 +15,9 @@ typedef struct gamedata gamedata;
 
 void jsondata_init(void);
 void jsondata_done(void);
+
+int factions_walk(struct gamedata *gd, int (*callback)(struct faction *, void *), void *arg);
+int regions_walk(struct gamedata *gd, int (*callback)(struct region *, void *), void *arg);
 
 struct gamedata *game_create(struct sqlite3 *db);
 void game_free(struct gamedata *gd);

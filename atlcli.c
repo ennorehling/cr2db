@@ -11,6 +11,9 @@
 #include "region.h"
 #include "faction.h"
 
+#include "export.h"
+#include "import.h"
+
 #include <cJSON.h>
 #include <sqlite3.h>
 #include <crpat.h>
@@ -28,7 +31,7 @@ static sqlite3 * g_db;
 static const char *g_dbname = ":memory:";
 const char *g_program = "atl-cli";
 
-int eval_command(int argc, char **argv);
+int eval_command(struct gamedata *gd, int argc, char **argv);
 
 static int usage(void) {
     fprintf(stderr, "usage: %s [options] [command] [arguments]\n", g_program);
@@ -66,7 +69,7 @@ static int parseargs(int argc, char **argv) {
 
 #define MAXARGS 10
 
-int eval_script(int argc, char **argv) {
+static int eval_script(struct gamedata *gd, int argc, char **argv) {
     if (argc > 0) {
         const char * filename = argv[0];
         FILE * F = fopen(filename, "rt");
@@ -75,13 +78,15 @@ int eval_script(int argc, char **argv) {
                 char line[80];
                 char *av[MAXARGS], *tok;
                 int ac = 0, err;
-                fgets(line, sizeof(line), F);
+                if (!fgets(line, sizeof(line), F)) {
+                    break;
+                }
                 tok = strtok(line, " \n");
                 while (tok && ac < MAXARGS) {
                     av[ac++] = tok;
                     tok = strtok(NULL, " \n");
                 }
-                err = eval_command(ac, av);
+                err = eval_command(gd, ac, av);
                 if (err) {
                     return err;
                 }
@@ -97,7 +102,7 @@ int json_get_int(cJSON *obj, const char *key) {
     return child->valueint;
 }
 
-static int merge_faction(gamedata *gd, cJSON *obj, bool is_new) {
+static int merge_faction(struct gamedata *gd, cJSON *obj, bool is_new) {
     int id;
     faction *f;
     assert(obj->type == cJSON_Object);
@@ -116,7 +121,7 @@ static int merge_faction(gamedata *gd, cJSON *obj, bool is_new) {
     return db_write_faction(g_db, f);
 }
 
-static int merge_factions(gamedata *gd, cJSON *arr, bool is_new) {
+static int merge_factions(struct gamedata *gd, cJSON *arr, bool is_new) {
     int err = SQLITE_OK;
     cJSON *child;
     assert(arr->type == cJSON_Array);
@@ -128,7 +133,7 @@ static int merge_factions(gamedata *gd, cJSON *arr, bool is_new) {
     return err;
 }
 
-static int merge_region(gamedata *gd, cJSON *obj, bool is_new) {
+static int merge_region(struct gamedata *gd, cJSON *obj, bool is_new) {
     int id = 0, x, y, z = 0;
     cJSON **p_child = &obj->child;
     cJSON **jUnits = NULL;
@@ -263,7 +268,7 @@ static int merge_region(gamedata *gd, cJSON *obj, bool is_new) {
     return -1;
 }
 
-static int merge_regions(gamedata *gd, cJSON *arr, bool is_new) {
+static int merge_regions(struct gamedata *gd, cJSON *arr, bool is_new) {
     int err = SQLITE_OK;
     cJSON *child;
     assert(arr->type == cJSON_Array);
@@ -352,7 +357,7 @@ static int merge_units(gamedata *gd, cJSON *arr, struct region *r) {
 }
 */
 
-int gd_merge(gamedata *gd, int game_turn, cJSON *json) {
+int gd_merge(struct gamedata *gd, int game_turn, cJSON *json) {
     int turn = 0;
     int err = SQLITE_OK;
     cJSON *child;
@@ -381,12 +386,32 @@ int gd_merge(gamedata *gd, int game_turn, cJSON *json) {
     return err;
 }
 
-static int import_cr(int argc, char **argv) {
+static int export_cr(struct gamedata *gd, int argc, char **argv) {
+    const char *filename = "stdout";
+    FILE *F = stdout;
+    cJSON *json = NULL;
+    int err;
+
+    if (argc > 0) {
+        filename = argv[0];
+        F = fopen(filename, "wt");
+        if (!F) {
+            perror(filename);
+            return errno;
+        }
+    }
+    err = export(gd, F);
+    if (F != stdout) {
+        fclose(F);
+    }
+    return err;
+}
+
+static int import_cr(struct gamedata *gd, int argc, char **argv) {
     const char *filename = "stdin";
     FILE *F = stdin;
-    int err;
     cJSON *json = NULL;
-    gamedata *gd = NULL;
+
     if (argc > 0) {
         filename = argv[0];
         F = fopen(filename, "rt");
@@ -395,7 +420,6 @@ static int import_cr(int argc, char **argv) {
             return errno;
         }
     }
-    gd = game_create(g_db);
     if (gd) {
         json = crfile_read(F, filename);
         if (json) {
@@ -411,12 +435,12 @@ static int import_cr(int argc, char **argv) {
     return 0;
 }
 
-int eval_command(int argc, char **argv) {
+int eval_command(struct gamedata *gd, int argc, char **argv) {
     struct process {
         const char *command;
-        int(*eval)(int, char **);
+        int(*eval)(struct gamedata *, int, char **);
     } procs[] = {
-        {"export-cr", NULL},
+        {"export-cr", export_cr},
         {"export-map", NULL},
         {"import-cr", import_cr},
         {"script", eval_script},
@@ -428,7 +452,7 @@ int eval_command(int argc, char **argv) {
     for (i = 0; procs[i].command; ++i) {
         if (strcmp(command, procs[i].command) == 0) {
             if (procs[i].eval) {
-                return procs[i].eval(argc - 1, argv + 1);
+                return procs[i].eval(gd, argc - 1, argv + 1);
             }
             else {
                 fprintf(stderr, "not implemented: %s\n", command);
@@ -442,6 +466,7 @@ int eval_command(int argc, char **argv) {
 
 int main(int argc, char **argv) {
     int err = 0, i;
+    struct gamedata *gd;
 
     g_program = argv[0];
     i = parseargs(argc, argv);
@@ -452,9 +477,11 @@ int main(int argc, char **argv) {
 
     jsondata_init();
     config_init(g_db);
+    gd = game_create(g_db);
     if (i >= 1 && i <= argc) {
-        err = eval_command(argc-i, argv + i);
+        err = eval_command(gd, argc-i, argv + i);
     }
+    game_free(gd);
     config_done();
     jsondata_done();
 

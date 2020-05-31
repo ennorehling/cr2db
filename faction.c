@@ -11,7 +11,6 @@ void free_faction(faction *f)
     cJSON_Delete(f->data);
     free(f->name);
     free(f->email);
-    free(f);
 }
 
 faction *create_faction(cJSON *data)

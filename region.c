@@ -41,6 +41,5 @@ region *create_region(cJSON *data)
 void free_region(region *r) {
     cJSON_Delete(r->data);
     free(r->name);
-    free(r);
 }
 

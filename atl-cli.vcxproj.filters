@@ -72,6 +72,12 @@
     <ClCompile Include="unit.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="export.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="import.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cgi.h">
@@ -146,10 +152,14 @@
     <ClInclude Include="unit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="import.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="crschema.sql">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="export.cr" />
   </ItemGroup>
 </Project>

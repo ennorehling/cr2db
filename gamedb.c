@@ -23,6 +23,37 @@ static sqlite3_stmt *g_stmt_select_faction;
 static sqlite3_stmt *g_stmt_insert_region;
 static sqlite3_stmt *g_stmt_select_region;
 
+static int db_prepare(sqlite3 *db) {
+    int err;
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `factions` (`id`, `data`, `name`, `email`) VALUES (?,?,?,?)", -1,
+        &g_stmt_insert_faction, NULL);
+    err = sqlite3_prepare_v2(db,
+        "SELECT `data`, `name`, `email` FROM `factions` WHERE `id` = ?", -1,
+        &g_stmt_select_faction, NULL);
+
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `regions` (`id`, `data`, `x`, `y`, `z`, `name`, `terrain`) VALUES (?,?,?,?,?,?,?)", -1,
+        &g_stmt_insert_region, NULL);
+
+    err = sqlite3_prepare_v2(db,
+        "SELECT `data`, `id`, `name`, `terrain` FROM `regions` WHERE `x` = ? AND `y` = ? AND `z` = ?", -1,
+        &g_stmt_select_region, NULL);
+
+    /*
+        err = sqlite3_prepare_v2(db,
+            "INSERT OR REPLACE INTO `units` (`id`, `data`, `name`, `orders`, `region_id`, `faction_id`) VALUES (?,?,?,?,?,?)", -1,
+            &g_stmt_insert_unit, NULL);
+        err = sqlite3_prepare_v2(db,
+            "INSERT OR REPLACE INTO `ships` (`id`, `data`, `name`, `region_id`) VALUES (?,?,?,?)", -1,
+            &g_stmt_insert_ship, NULL);
+        err = sqlite3_prepare_v2(db,
+            "INSERT OR REPLACE INTO `buildings` (`id`, `data`, `name`, `region_id`) VALUES (?,?,?,?)", -1,
+            &g_stmt_insert_building, NULL);
+    */
+    return err;
+}
+
 static int db_bind_json(sqlite3_stmt *stmt, int index, cJSON *object) {
     int err;
     char *data = cJSON_PrintUnformatted(object);
@@ -60,6 +91,39 @@ db_write_faction_fail:
     return err;
 }
 
+static void read_faction_row(faction *f, int ncols, char **values, char**names)
+{
+    f->data = values[0] ? cJSON_Parse(values[0]) : NULL;
+    f->id = values[1] ? atoi(values[1]) : 0;
+    f->name = str_strdup(values[2]);
+    f->email = str_strdup(values[3]);
+}
+
+struct walk_faction {
+    int (*callback)(struct faction *, void *);
+    void *arg;
+};
+
+static int cb_walk_faction(void *udata, int ncols, char **values, char **names)
+{
+    int err;
+    faction cursor;
+    struct walk_faction *ctx = (struct walk_faction *)udata;
+
+    read_faction_row(&cursor, ncols, values, names);
+    err = ctx->callback(&cursor, ctx->arg);
+    free_faction(&cursor);
+    return err;
+}
+
+int db_factions_walk(struct sqlite3 *db, int(*callback)(struct faction *, void *), void *arg)
+{
+    struct walk_faction ctx;
+    ctx.arg = arg;
+    ctx.callback = callback;
+    return sqlite3_exec(db, "SELECT `data`, `id`, `name`, `email` FROM `factions`", cb_walk_faction, &ctx, NULL);
+}
+
 faction *db_read_faction(sqlite3 *db, unsigned int id) {
     int err;
     const void *data;
@@ -91,43 +155,6 @@ faction *db_read_faction(sqlite3 *db, unsigned int id) {
 db_read_faction_fail:
     fputs(sqlite3_errmsg(db), stderr);
     return NULL;
-}
-
-/*
-static sqlite3_stmt *g_stmt_insert_unit;
-static sqlite3_stmt *g_stmt_insert_ship;
-static sqlite3_stmt *g_stmt_insert_building;
-*/
-
-static int db_prepare(sqlite3 *db) {
-    int err;
-    err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `factions` (`id`, `data`, `name`, `email`) VALUES (?,?,?,?)", -1,
-        &g_stmt_insert_faction, NULL);
-    err = sqlite3_prepare_v2(db,
-        "SELECT `data`, `name`, `email` FROM `factions` WHERE `id` = ?", -1,
-        &g_stmt_select_faction, NULL);
-
-    err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `regions` (`id`, `data`, `x`, `y`, `z`, `name`, `terrain`) VALUES (?,?,?,?,?,?,?)", -1,
-        &g_stmt_insert_region, NULL);
-
-    err = sqlite3_prepare_v2(db,
-        "SELECT `data`, `id`, `name`, `terrain` FROM `regions` WHERE `x` = ? AND `y` = ? AND `z` = ?", -1,
-        &g_stmt_select_region, NULL);
-
-/*
-    err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `units` (`id`, `data`, `name`, `orders`, `region_id`, `faction_id`) VALUES (?,?,?,?,?,?)", -1,
-        &g_stmt_insert_unit, NULL);
-    err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `ships` (`id`, `data`, `name`, `region_id`) VALUES (?,?,?,?)", -1,
-        &g_stmt_insert_ship, NULL);
-    err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `buildings` (`id`, `data`, `name`, `region_id`) VALUES (?,?,?,?)", -1,
-        &g_stmt_insert_building, NULL);
-*/
-    return err;
 }
 
 static int db_install(sqlite3 *db, const char *schema) {
@@ -371,6 +398,41 @@ int db_write_region(struct sqlite3 *db, const struct region *r) {
 db_write_region_fail:
     fputs(sqlite3_errmsg(db), stderr);
     return err;
+}
+
+static void read_region_row(region *r, int ncols, char **values, char **names) {
+    r->data = values[0] ? cJSON_Parse(values[0]) : NULL;
+    r->id = values[1] ? atoi(values[1]) : 0;
+    r->x = values[2] ? atoi(values[2]) : 0;
+    r->y = values[3] ? atoi(values[3]) : 0;
+    r->plane = values[4] ? atoi(values[4]) : 0;
+    r->name = str_strdup(values[5]);
+    r->terrain = get_terrain(values[6]);
+}
+
+struct walk_region {
+    int(*callback)(struct region *, void *);
+    void *arg;
+};
+
+static int cb_walk_region(void *udata, int ncols, char **values, char **names)
+{
+    int err;
+    region cursor;
+    struct walk_region *ctx = (struct walk_region *)udata;
+
+    read_region_row(&cursor, ncols, values, names);
+    err = ctx->callback(&cursor, ctx->arg);
+    free_region(&cursor);
+    return err;
+}
+
+int db_regions_walk(struct sqlite3 *db, int(*callback)(struct region *, void *), void *arg)
+{
+    struct walk_region ctx;
+    ctx.arg = arg;
+    ctx.callback = callback;
+    return sqlite3_exec(db, "SELECT `data`, `id`, `x`, `y`, `z`, `name`, `terrain` FROM `regions`", cb_walk_region, &ctx, NULL);
 }
 
 region *db_read_region(struct sqlite3 *db, int x, int y, int z) {
