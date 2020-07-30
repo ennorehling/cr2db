@@ -79,6 +79,7 @@ static const struct {
     { NULL, TYPE_OBJECT },
 };
 
+static void gd_update(parser_t *p) {
     if (p->root) {
         if (p->faction) {
             faction_update(p->gd, p->faction, p->root);
