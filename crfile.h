@@ -5,4 +5,3 @@
 struct cJSON;
 
 struct cJSON *crfile_read(FILE * F, const char *crname);
-

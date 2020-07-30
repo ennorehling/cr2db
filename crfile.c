@@ -23,8 +23,8 @@
 typedef struct parser_t {
     CR_Parser parser;
     cJSON *root, *block;
-    cJSON *stack[STACKSIZE];
-    int sp;
+    cJSON *parents[STACKSIZE];
+    int top;
 } parser_t;
 
 static const struct {
@@ -64,7 +64,7 @@ static const char *block_name(const char * name, int keyc, int keyv[]) {
 }
 
 static cJSON *block_create(parser_t * p, const char *name) {
-    cJSON *block = NULL, *parent = p->stack[p->sp];
+    cJSON *block = NULL, *parent = p->parents[p->top];
     int i;
 
     for (i = 0; block_info[i].name; ++i) {
@@ -75,14 +75,14 @@ static cJSON *block_create(parser_t * p, const char *name) {
             } else {
                 block = cJSON_CreateObject();
             }
-            if (depth > p->sp + 1) {
+            if (depth > p->top + 1) {
                 log_error(NULL, gettext("invalid object hierarchy at %s\n"), block_name(name, 0, NULL));
                 parent = NULL;
             }
             else {
                 // Adjust the stack so our parent is on top:
-                p->sp = depth - 1;
-                parent = p->stack[p->sp];
+                p->top = depth - 1;
+                parent = p->parents[p->top];
             }
             break;
         }
@@ -154,8 +154,8 @@ static enum CR_Error handle_object(parser_t *p, const char *name, unsigned int k
                 fprintf(stderr, gettext("unknown version %d\n"), version);
             }
             block = cJSON_CreateObject();
-            p->stack[0] = p->root = p->block = block;
-            p->sp = 0;
+            p->parents[0] = p->root = p->block = block;
+            p->top = 0;
         }
         else {
             fprintf(stderr, gettext("expecting first element to be VERSION, got %s\n"), name);
@@ -169,8 +169,8 @@ static enum CR_Error handle_object(parser_t *p, const char *name, unsigned int k
         cJSON *block = cJSON_CreateObject();
         if (depth < 0) {
             // TODO: error handling (i.e. VERSION -> MESSAGE)
-            if (p->sp >= 0 && p->sp < STACKSIZE) {
-                parent = p->stack[p->sp];
+            if (p->top >= 0 && p->top < STACKSIZE) {
+                parent = p->parents[p->top];
             }
             else {
                 fprintf(stderr, gettext("invalid object hierarchy at %s\n"), block_name(name, keyc, keyv));
@@ -178,15 +178,15 @@ static enum CR_Error handle_object(parser_t *p, const char *name, unsigned int k
             }
         }
         else {
-            if (depth == 0 || depth > p->sp + 1) {
+            if (depth == 0 || depth > p->top + 1) {
                 fprintf(stderr, gettext("invalid object hierarchy at %s\n"), block_name(name, keyc, keyv));
                 return CR_ERROR_GRAMMAR;
             }
             else {
-                parent = p->stack[depth - 1];
+                parent = p->parents[depth - 1];
                 // Make this object top of stack, it may have sub-blocks:
-                p->sp = depth;
-                p->stack[p->sp] = block;
+                p->top = depth;
+                p->parents[p->top] = block;
             }
         }
         p->block = block;

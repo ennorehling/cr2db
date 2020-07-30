@@ -1,6 +1,6 @@
 #include "export.h"
 
-#include "jsondata.h"
+#include "gamedata.h"
 #include "faction.h"
 #include "region.h"
 
@@ -48,20 +48,24 @@ static int cr_faction(faction *f, void *arg)
 {
     FILE * F = (FILE *)arg;
     fprintf(F, "PARTEI %d\n", f->id);
-    json_to_cr(f->data, F);
+    if (f->data) {
+        json_to_cr(f->data, F);
+    }
     return 0;
 }
 
 static int cr_region(region *r, void *arg)
 {
     FILE * F = (FILE *)arg;
-    if (r->plane == 0) {
-        fprintf(F, "REGION %d %d\n", r->x, r->y);
+    if (r->loc.z == 0) {
+        fprintf(F, "REGION %d %d\n", r->loc.x, r->loc.y);
     }
     else {
-        fprintf(F, "REGION %d %d %d\n", r->x, r->y, r->plane);
+        fprintf(F, "REGION %d %d %d\n", r->loc.x, r->loc.y, r->loc.z);
     }
-    json_to_cr(r->data, F);
+    if (r->data) {
+        json_to_cr(r->data, F);
+    }
     return 0;
 }
 
@@ -70,7 +74,7 @@ int export(struct gamedata *gd, FILE *F)
     int err;
     assert(gd);
 
-    fputs("VERSION 66\n", F);
+    fprintf(F, "VERSION 66\n%d;Runde\n36;Basis\n", game_get_turn(gd));
     err = factions_walk(gd, cr_faction, F);
     if (err != 0) return err;
     err = regions_walk(gd, cr_region, F);

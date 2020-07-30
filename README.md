@@ -13,12 +13,22 @@
         </Location>
 </VirtualHost>
 
-# "Neuen" CR importieren:
+# Merge Strategien:
 
-Datenbank öffnen
-CR laden in ein cJSON
-Für alle Parteien: UPDATE der faction.
+Für alle Parteien: UPDATE der faction mit der neueren.
+- was ist mit GEGENSTAENDE, OPTIONEN, ALLIANZ?
 Für alle Regionen:
-- Einheiten, Schiffe und Burgen aus dem JSON lösen
-- wenn ich drin stehe, UPDATE der region.
 - wenn ich GRENZE, PREISE, RESOURCE nicht sehe, dann den Block aus der DB einflechten.
+
+# ToDo:
+- "live" CR import während des parsing
+    + GEGENSTAENDE, OPTIONEN, alles mit keyc == 0: nicht auf den stack
+    - mit keyc < 0: nur das aktuelle array-element auf den stack.
+    - ALLIANZ geht immer noch auf den Stack und nicht runter?
+        - mehrere Array-Elemente in Folge erhöhen p->sp
+
+- CR import innerhalb einer Transaktion, ROLLBACK wenn Fehelr beim parsing?
+
+## CR import status:
+- sample.cr wird gelesen bis zum ersten BATTLE
+- Strategie für BATTLE ist noch unklar
