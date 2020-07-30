@@ -421,6 +421,7 @@ db_write_region_fail:
 
 static void read_region_row(region *r, int ncols, char **values, char **names) {
     assert(ncols >=7);
+    (void)names;
     r->data = values[0] ? cJSON_Parse(values[0]) : NULL;
     r->id = values[1] ? atoi(values[1]) : 0;
     r->loc.x = values[2] ? atoi(values[2]) : 0;
