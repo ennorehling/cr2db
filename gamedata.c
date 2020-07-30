@@ -189,6 +189,7 @@ void region_update(gamedata *gd, region *r, cJSON *data)
 
 void region_reset(struct gamedata *gd, struct region *r)
 {
+    assert(gd);
     while (r->buildings) {
         building *c = r->buildings;
         r->buildings = c->next;
@@ -209,6 +210,7 @@ void region_reset(struct gamedata *gd, struct region *r)
 struct unit *unit_create(struct gamedata *gd, struct region *r, struct cJSON *data)
 {
     unit * u = create_unit(data);
+    assert(gd);
     if (u) {
         u->region = r;
     }
@@ -217,11 +219,17 @@ struct unit *unit_create(struct gamedata *gd, struct region *r, struct cJSON *da
 
 struct ship *ship_create(struct gamedata *gd, struct region *r, struct cJSON *data)
 {
+    (void)data;
+    assert(r);
+    assert(gd);
     return NULL;
 }
 
 struct building *building_create(struct gamedata *gd, struct region *r, struct cJSON *data)
 {
+    (void)data;
+    assert(r);
+    assert(gd);
     return NULL;
 }
 
