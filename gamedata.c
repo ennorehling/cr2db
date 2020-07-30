@@ -160,7 +160,9 @@ static void update_region(gamedata *gd, region *r, cJSON *data)
                 if (strcmp(child->string, "Terrain") == 0) {
                     const char *crname = child->valuestring;
                     const terrain *t = terrains_get_crname(&gd->terrains, crname);
-                    r->terrain = t->id;
+                    if (t) {
+                        r->terrain = t->id;
+                    }
                 }
             }
         }
@@ -237,6 +239,7 @@ gamedata *game_create(struct sqlite3 *db)
 {
     gamedata *gd = calloc(1, sizeof(gamedata));
     gd->db = db;
+    db_load_terrains(gd->db, &gd->terrains);
     db_load_map(gd->db, &gd->regions);
     db_load_factions(gd->db, &gd->factions);
     return gd;
