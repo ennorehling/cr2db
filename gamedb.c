@@ -109,6 +109,7 @@ db_write_faction_fail:
 static void read_faction_row(faction *f, int ncols, char **values, char**names)
 {
     assert(ncols>=4);
+    (void)names;
     f->data = values[0] ? cJSON_Parse(values[0]) : NULL;
     f->id = values[1] ? atoi(values[1]) : 0;
     f->name = str_strdup(values[2]);
