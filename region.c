@@ -6,7 +6,6 @@
 #include <cJSON.h>
 
 #include <assert.h>
-#include <malloc.h>
 
 void terrains_free(terrains *all)
 {

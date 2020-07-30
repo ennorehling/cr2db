@@ -2,8 +2,6 @@
 
 #include <cJSON.h>
 
-#include <malloc.h>
-
 void free_building(building *b)
 {
     cJSON_Delete(b->data);
