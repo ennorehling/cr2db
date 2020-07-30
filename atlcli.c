@@ -177,7 +177,6 @@ static int merge_units(gamedata *gd, cJSON *arr, struct region *r) {
 static int export_cr(struct gamedata *gd, int argc, char **argv) {
     const char *filename = "stdout";
     FILE *F = stdout;
-    cJSON *json = NULL;
     int err;
 
     if (argc > 0) {
@@ -198,7 +197,6 @@ static int export_cr(struct gamedata *gd, int argc, char **argv) {
 static int import_cr(struct gamedata *gd, int argc, char **argv) {
     const char *filename = "stdin";
     FILE *F = stdin;
-    cJSON *json = NULL;
     int err;
 
     if (argc > 0) {
@@ -260,7 +258,6 @@ int main(int argc, char **argv) {
     gamedata_init();
     config_init(g_db);
     gd = game_create(g_db);
-    game_load(gd);
     if (i >= 1 && i <= argc) {
         err = eval_command(gd, argc-i, argv + i);
         if (err) return err;
