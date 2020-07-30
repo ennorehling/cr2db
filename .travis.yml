@@ -12,6 +12,7 @@ addons:
       - libbsd-dev
       - libsqlite3-dev
       - cppcheck
+    update: true
 script:
   - s/cppcheck
   - s/build
