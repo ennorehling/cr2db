@@ -3,10 +3,10 @@ language: c
 compiler:
   - gcc
   - clang
-script:
-  - s/cppcheck
-  - s/build
 addons:
+  homebrew:
+    packages:
+      - cppcheck
   apt:
     packages:
       - libbsd-dev
