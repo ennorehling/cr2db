@@ -12,6 +12,9 @@ addons:
       - libbsd-dev
       - libsqlite3-dev
       - cppcheck
+script:
+  - s/cppcheck
+  - s/build
 os:
   - linux
   - macos
