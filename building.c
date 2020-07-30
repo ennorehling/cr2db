@@ -1,6 +1,7 @@
 #include "building.h"
 
 #include <cJSON.h>
+#include <stdlib.h>
 
 void free_building(building *b)
 {

@@ -1,6 +1,7 @@
 #include "ship.h"
 
 #include <cJSON.h>
+#include <stdlib.h>
 
 void free_ship(ship *s) {
     cJSON_Delete(s->data);
