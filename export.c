@@ -47,7 +47,7 @@ static void json_to_cr(cJSON *json, FILE *F)
 static int cr_faction(faction *f, void *arg)
 {
     FILE * F = (FILE *)arg;
-    fprintf(F, "PARTEI %d\n", f->id);
+    fprintf(F, "PARTEI %u\n", f->id);
     if (f->data) {
         json_to_cr(f->data, F);
     }
