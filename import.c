@@ -79,16 +79,6 @@ static const struct {
     { NULL, TYPE_OBJECT },
 };
 
-static bool is_sequence(const char *name) {
-    int i;
-    for (i = 0; block_info[i].name; ++i) {
-        if (strcmp(name, block_info[i].name) == 0) {
-            return block_info[i].type == TYPE_SEQUENCE;
-        }
-    }
-    return false;
-}
-
 static void gd_update(parser_t *p) {
     if (p->root) {
         if (p->faction) {

@@ -3,13 +3,15 @@ language: c
 compiler:
   - gcc
   - clang
-script: s/travis-build
+script:
+  - s/cppcheck
+  - s/build
 addons:
   apt:
     packages:
-      - cppcheck
-      - valgrind
+      - libbsd-dev
       - libsqlite3-dev
-      - libfcgi-dev
+      - cppcheck
 os:
   - linux
+  - macos

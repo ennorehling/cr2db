@@ -2,7 +2,7 @@
 
 #include <cJSON.h>
 
-#include <malloc.h>
+#include <stdlib.h>
 
 void free_unit(unit *u) {
     free(u->name);

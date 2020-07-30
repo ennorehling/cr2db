@@ -5,7 +5,6 @@
 
 #ifdef HAVE_FCGI
 #include <fcgiapp.h>
-#endif
 
 int request_init(request *req, enum reqtype_e type, void *arg) {
     assert(req);

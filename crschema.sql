@@ -1,3 +1,4 @@
+-- sqlite
 DROP TABLE IF EXISTS config;
 CREATE TABLE config (
     key TEXT NOT NULL PRIMARY KEY,
@@ -17,7 +18,7 @@ INSERT INTO terrains (name, crname) VALUES ('firewall', 'Feuerwand');
 INSERT INTO terrains (name, crname) VALUES ('glacier', 'Gletscher');
 INSERT INTO terrains (name, crname) VALUES ('plain', 'Ebene');
 INSERT INTO terrains (name, crname) VALUES ('swamp', 'Sumpf');
-INSERT INTO terrains (name, crname) VALUES ('desert', 'Wüste');
+INSERT INTO terrains (name, crname) VALUES ('desert', 'Wï¿½ste');
 INSERT INTO terrains (name, crname) VALUES ('packice', 'Packeis');
 INSERT INTO terrains (name, crname) VALUES ('highland', 'Hochland');
 INSERT INTO terrains (name, crname) VALUES ('mountain', 'Berge');

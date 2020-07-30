@@ -5,7 +5,6 @@
 #include <strings.h>
 #include <cJSON.h>
 
-#include <malloc.h>
 #include <string.h>
 
 void free_faction(faction *f)
