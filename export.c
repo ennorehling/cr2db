@@ -1,6 +1,7 @@
 #include "export.h"
 
 #include "gamedata.h"
+#include "gamedb.h"
 #include "faction.h"
 #include "region.h"
 
@@ -69,14 +70,29 @@ static int cr_region(region *r, void *arg)
     return 0;
 }
 
-int export(struct gamedata *gd, FILE *F)
+int export_db(struct gamedata *gd, FILE *F)
 {
     int err;
     assert(gd);
 
-    fprintf(F, "VERSION 66\n%d;Runde\n36;Basis\n", game_get_turn(gd));
-    err = factions_walk(gd, cr_faction, F);
+    err = game_load(gd);
     if (err != 0) return err;
+    fprintf(F, "VERSION 66\n%d;Runde\n36;Basis\n", game_get_turn(gd));
+    err = db_factions_walk(gd->db, cr_faction, F);
+    if (err != 0) return err;
+    err = db_regions_walk(gd->db, cr_region, F);
+    if (err != 0) return err;
+    return 0;
+}
+
+int export_map(struct gamedata *gd, FILE *F)
+{
+    int err;
+    assert(gd);
+
+    err = db_load_map(gd->db, &gd->regions);
+    if (err != 0) return err;
+    fprintf(F, "VERSION 66\n%d;Runde\n36;Basis\n", game_get_turn(gd));
     err = regions_walk(gd, cr_region, F);
     if (err != 0) return err;
     return 0;

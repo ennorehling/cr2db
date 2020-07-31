@@ -43,7 +43,7 @@ static int usage(void) {
     fputs("  export-cr [filename]\n\texport game data to a CR file.\n", stderr);
     fputs("  export-map [filename]\n\texport map data only to a CR file.\n", stderr);
     fputs("  template  [filename]\n\tcreate an order template.\n", stderr);
-    return -1;
+    return 0;
 }
 
 static int parseargs(int argc, char **argv) {
@@ -187,7 +187,7 @@ static int export_cr(struct gamedata *gd, int argc, char **argv) {
             return errno;
         }
     }
-    err = export(gd, F);
+    err = export_db(gd, F);
     if (F != stdout) {
         fclose(F);
     }
@@ -255,7 +255,6 @@ int main(int argc, char **argv) {
         return err;
     }
 
-    gamedata_init();
     config_init(g_db);
     gd = game_create(g_db);
     if (i >= 1 && i <= argc) {
@@ -269,7 +268,6 @@ int main(int argc, char **argv) {
     if (err) return err;
     game_free(gd);
     config_done();
-    gamedata_done();
 
     if (g_db) {
         err = db_close(g_db);

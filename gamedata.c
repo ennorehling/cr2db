@@ -20,43 +20,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAXRACES 64
-static int num_races;
-char *racename[MAXRACES];
-
-int get_race(const char *name) {
-    int i;
-    for (i = 0; i != num_races; ++i) {
-        if (strcmp(name, racename[i]) == 0) {
-            return i;
-        }
-    }
-    assert(num_races < MAXRACES);
-    racename[num_races] = str_strdup(name);
-    return num_races++;
-}
-
-void gamedata_init(void)
-{
-}
-
-void gamedata_done(void)
-{
-    int i;
-    for (i = 0; i != num_races; ++i) {
-        free(racename[i]);
-    }
-}
-
-struct gamedata {
-    struct sqlite3 *db;
-    int turn;
-    struct terrains terrains;
-    struct regions regions;
-    struct factions factions;
-};
-
-
 int factions_walk(struct gamedata *gd, int (*callback)(struct faction *, void *), void *arg)
 {
     int i, len = stbds_arrlen(gd->factions.arr);
@@ -239,8 +202,6 @@ gamedata *game_create(struct sqlite3 *db)
     gamedata *gd = calloc(1, sizeof(gamedata));
     gd->db = db;
     db_load_terrains(gd->db, &gd->terrains);
-    db_load_map(gd->db, &gd->regions);
-    db_load_factions(gd->db, &gd->factions);
     return gd;
 }
 

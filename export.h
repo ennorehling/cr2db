@@ -4,4 +4,5 @@
 
 struct gamedata;
 
-int export(struct gamedata *gd, FILE *F);
+int export_db(struct gamedata *gd, FILE *F);
+int export_map(struct gamedata *gd, FILE *F);

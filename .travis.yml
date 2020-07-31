@@ -1,22 +1,22 @@
 sudo: false
 language: c
 stages: 
-  - analyze
-  - build
+  - check
+  - test
 jobs:
   include:
     - os: macos
-      stage: analyze
+      stage: check
       install: brew install cppcheck
-    - stage: analyze
+    - stage: check
       script: s/cppcheck
-    - stage: build
+    - stage: test
       script: 
         - s/build
         - build/atl-cli help
   exclude:
     - os: macos
-      stage: analyze
+      stage: check
 compiler:
   - gcc
   - clang

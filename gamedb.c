@@ -53,7 +53,7 @@ static int db_prepare(sqlite3 *db) {
         "VALUES (?,?,?,?,?,?,?)", -1, &g_stmt_insert_region, NULL);
     if (err != SQLITE_OK) goto db_prepare_fail;
     err = sqlite3_prepare_v2(db,
-        "SELECT `data`, `id`, `name`, `terrain_id` "
+        "SELECT `data`, `id`, `terrain_id`, `name` "
         "FROM `regions` WHERE `x` = ? AND `y` = ? AND `z` = ?", -1,
         &g_stmt_select_region, NULL);
     if (err != SQLITE_OK) goto db_prepare_fail;
@@ -428,8 +428,9 @@ static void read_region_row(region *r, int ncols, char **values, char **names) {
     r->loc.x = values[2] ? atoi(values[2]) : 0;
     r->loc.y = values[3] ? atoi(values[3]) : 0;
     r->loc.z = values[4] ? atoi(values[4]) : 0;
-    r->name = str_strdup(values[5]);
-    r->terrain = values[6] ? atoi(values[6]) : 0;
+    r->terrain = values[5] ? atoi(values[5]) : 0;
+    free(r->name);
+    r->name = str_strdup(values[6]);
 }
 
 struct walk_region {
@@ -454,40 +455,39 @@ int db_regions_walk(struct sqlite3 *db, int(*callback)(struct region *, void *),
     struct walk_region ctx;
     ctx.arg = arg;
     ctx.callback = callback;
-    return sqlite3_exec(db, "SELECT `data`, `id`, `x`, `y`, `z`, `name`, `terrain_id` FROM `regions`", cb_walk_region, &ctx, NULL);
+    return sqlite3_exec(db, "SELECT `data`, `id`, `x`, `y`, `z`, `terrain_id`, `name` FROM `regions`", cb_walk_region, &ctx, NULL);
 }
 
-region *db_read_region(struct sqlite3 *db, int x, int y, int z) {
+int db_read_region(struct sqlite3 *db, region *r) {
     int err;
     const void *data;
 
     err = sqlite3_reset(g_stmt_select_region);
     if (err != SQLITE_OK) goto db_read_region_fail;
-    err = sqlite3_bind_int(g_stmt_select_region, 1, x);
-    err = sqlite3_bind_int(g_stmt_select_region, 2, y);
-    err = sqlite3_bind_int(g_stmt_select_region, 3, z);
+    err = sqlite3_bind_int(g_stmt_select_region, 1, r->loc.x);
+    err = sqlite3_bind_int(g_stmt_select_region, 2, r->loc.y);
+    err = sqlite3_bind_int(g_stmt_select_region, 3, r->loc.z);
     if (err != SQLITE_OK) goto db_read_region_fail;
     err = sqlite3_step(g_stmt_select_region);
     if (err == SQLITE_DONE) {
-        return NULL;
+        return SQLITE_NOTFOUND;
     }
     else if (err != SQLITE_ROW) goto db_read_region_fail;
     data = sqlite3_column_blob(g_stmt_select_region, 0);
     if (data) {
         cJSON *json = cJSON_Parse(data);
         if (json) {
-            region *r = create_region(json);
             r->id = sqlite3_column_int(g_stmt_select_region, 1);
-            r->name = str_strdup(sqlite3_column_blob(g_stmt_select_region, 2));
-            r->terrain = sqlite3_column_int(g_stmt_select_region, 3);
-            return r;
+            r->terrain = sqlite3_column_int(g_stmt_select_region, 2);
+            free(r->name);
+            r->name = str_strdup(sqlite3_column_blob(g_stmt_select_region, 3));
         }
     }
-    return NULL;
+    return SQLITE_OK;
 
 db_read_region_fail:
     fputs(sqlite3_errmsg(db), stderr);
-    return NULL;
+    return err;
 }
 
 int db_region_delete_objects(sqlite3 *db, unsigned int region_id)
