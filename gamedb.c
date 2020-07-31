@@ -261,19 +261,26 @@ db_open_fail:
 int db_close(sqlite3 * db) {
     int err;
     err = sqlite3_finalize(g_stmt_select_faction);
+    if (err != SQLITE_OK) return err;
     g_stmt_select_faction = NULL;
     err = sqlite3_finalize(g_stmt_insert_faction);
+    if (err != SQLITE_OK) return err;
     g_stmt_insert_faction = NULL;
     err = sqlite3_finalize(g_stmt_insert_region);
+    if (err != SQLITE_OK) return err;
     g_stmt_insert_region = NULL;
     err = sqlite3_finalize(g_stmt_select_region);
+    if (err != SQLITE_OK) return err;
     g_stmt_select_region = NULL;
 /*
     err = sqlite3_finalize(g_stmt_insert_unit);
+    if (err != SQLITE_OK) return err;
     g_stmt_insert_unit = NULL;
     err = sqlite3_finalize(g_stmt_insert_ship);
+    if (err != SQLITE_OK) return err;
     g_stmt_insert_ship = NULL;
     err = sqlite3_finalize(g_stmt_insert_building);
+    if (err != SQLITE_OK) return err;
     g_stmt_insert_building = NULL;
 */
     err = sqlite3_close(db);
@@ -465,7 +472,9 @@ int db_read_region(struct sqlite3 *db, region *r) {
     err = sqlite3_reset(g_stmt_select_region);
     if (err != SQLITE_OK) goto db_read_region_fail;
     err = sqlite3_bind_int(g_stmt_select_region, 1, r->loc.x);
+    if (err != SQLITE_OK) goto db_read_region_fail;
     err = sqlite3_bind_int(g_stmt_select_region, 2, r->loc.y);
+    if (err != SQLITE_OK) goto db_read_region_fail;
     err = sqlite3_bind_int(g_stmt_select_region, 3, r->loc.z);
     if (err != SQLITE_OK) goto db_read_region_fail;
     err = sqlite3_step(g_stmt_select_region);

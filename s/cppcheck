@@ -1,6 +1,6 @@
 #!/bin/sh
 IGNORE=$(find . -name "*.test.c" | awk '{ print "-i"$1 }')
-
+cppcheck --version
 cppcheck --force --quiet --error-exitcode=1 \
  --enable=warning,performance,portability \
  $IGNORE -icJSON -iclibs \
