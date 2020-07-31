@@ -1,7 +1,8 @@
 #!/bin/sh
 IGNORE=$(find . -name "*.test.c" | awk '{ print "-i"$1 }')
 cppcheck --version
-cppcheck --force --quiet --error-exitcode=1 \
+cppcheck --force --quiet --error-exitcode=1 --template=gcc \
+ --suppress=uninitvar:stb_ds.h \
  --enable=warning,performance,portability \
  $IGNORE -icJSON -iclibs \
  -USTBDS_NO_SHORT_NAMES -USTBDS_UNIT_TESTS \
