@@ -3,11 +3,11 @@
 0 1 2;home
 "UTF-8";charset
 1;noskillpoints
-PARTEI 1045107
-"de";locale
-8;age
 PARTEI 683844
+"Königreich von Troicent";Parteiname
+"troicent@t-online.de";email
 "de";locale
+"";banner
 115;age
 4695;Optionen
 "Elfen";Typ
@@ -34,6 +34,16 @@ MESSAGE 56724256
 1740286322;type
 "Schweiger (schw) lernt viel schneller als gewöhnlich.";rendered
 1322564;unit
+PARTEI 1
+"Silivrendhel";Parteiname
+"corwin@amber.kn-bremen.de";email
+"Christian Schlittchen";banner
+"de";locale
+PARTEI 2
+"Die goldaeugigen Katzen";Parteiname
+"katze@felidae.kn-bremen.de";email
+"- Katja Zedel";banner
+"de";locale
 REGION 0 11
 441677996;id
 "Karnickelhügel";Name

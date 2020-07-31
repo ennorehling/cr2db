@@ -435,7 +435,6 @@ static void read_region_row(region *r, int ncols, char **values, char **names) {
     r->loc.y = values[3] ? atoi(values[3]) : 0;
     r->loc.z = values[4] ? atoi(values[4]) : 0;
     r->terrain = values[5] ? atoi(values[5]) : 0;
-    free(r->name);
     r->name = str_strdup(values[6]);
 }
 

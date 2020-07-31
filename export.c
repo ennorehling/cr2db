@@ -13,11 +13,15 @@ static void json_to_cr(cJSON *json, FILE *F)
 {
     if (json->type == cJSON_Array) {
         cJSON *child = json->child;
+        int index = 0;
         while (child) {
             if (child->type == cJSON_Object) {
                 cJSON *jId = cJSON_GetObjectItem(child, "id");
                 if (jId) {
                     fprintf(F, "%s %d\n", json->string, jId->valueint);
+                }
+                else {
+                    fprintf(F, "%s %d\n", json->string, ++index);
                 }
                 json_to_cr(child, F);
             }
@@ -75,9 +79,7 @@ int export_db(struct gamedata *gd, FILE *F)
     int err;
     assert(gd);
 
-    err = game_load(gd);
-    if (err != 0) return err;
-    fprintf(F, "VERSION 66\n%d;Runde\n36;Basis\n", game_get_turn(gd));
+    fprintf(F, "VERSION 66\n\"UTF-8\";charset\n%d;Runde\n36;Basis\n", game_get_turn(gd));
     err = db_factions_walk(gd->db, cr_faction, F);
     if (err != 0) return err;
     err = db_regions_walk(gd->db, cr_region, F);

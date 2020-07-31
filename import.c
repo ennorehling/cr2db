@@ -63,9 +63,10 @@ static const struct {
         TYPE_OBJECT,
         TYPE_ARRAY,
         TYPE_SEQUENCE,
+        TYPE_MAP,
     } type;
 } block_info[] = {
-    { "ALLIANZ", TYPE_SEQUENCE },
+    { "ALLIANZ", TYPE_MAP },
     { "GRENZE", TYPE_SEQUENCE },
     { "KAMPFZAUBER", TYPE_SEQUENCE },
     { "RESOURCE", TYPE_SEQUENCE },
@@ -132,7 +133,7 @@ static void stack_push(parser_t *p, cJSON *object, const char *name) {
     p->stack_top++;
 }
 
-static enum CR_Error block_create(parser_t * p, const char *name, cJSON *parent) {
+static enum CR_Error block_create(parser_t * p, const char *name, int key, cJSON *parent) {
     int i;
     cJSON *block = NULL, *arr;
 
@@ -143,22 +144,36 @@ static enum CR_Error block_create(parser_t * p, const char *name, cJSON *parent)
                 block = cJSON_CreateArray();
                 break;
 
+            case TYPE_MAP:
+                if (parent != NULL) {
+                    arr = cJSON_GetObjectItem(parent, name);
+                    if (arr == NULL) {
+                        arr = cJSON_CreateArray();
+                        cJSON_AddItemToObject(parent, name, arr);
+                    }
+                    block = cJSON_CreateObject();
+                    cJSON_AddNumberToObject(block, "id", key);
+                    cJSON_AddItemToArray(arr, block);
+                }
+                break;
+
             case TYPE_SEQUENCE:
-                if (parent == NULL) {
-                    return CR_ERROR_GRAMMAR;
+                if (parent != NULL) {
+                    arr = cJSON_GetObjectItem(parent, name);
+                    if (arr == NULL) {
+                        arr = cJSON_CreateArray();
+                        cJSON_AddItemToObject(parent, name, arr);
+                    }
+                    block = cJSON_CreateObject();
+                    cJSON_AddItemToArray(arr, block);
                 }
-                arr = cJSON_GetObjectItem(parent, name);
-                if (arr == NULL) {
-                    arr = cJSON_CreateArray();
-                    cJSON_AddItemToObject(parent, name, arr);
-                }
-                block = cJSON_CreateObject();
-                cJSON_AddItemToArray(arr, block);
                 break;
 
             case TYPE_OBJECT:
                 block = cJSON_CreateObject();
-                cJSON_AddItemToObject(parent, name, block);
+                if (parent) {
+                    cJSON_AddItemToObject(parent, name, block);
+                }
                 break;
             }
             break;
@@ -240,7 +255,7 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
         }
         else {
             cJSON *parent = find_parent(p, name);
-            return block_create(p, name, parent);
+            return block_create(p, name, keyv[0], parent);
         }
     }
     else if (keyc > 1) {
@@ -267,11 +282,7 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
     }
     else { /* keyc == 0 */
         cJSON *parent = find_parent(p, name);
-        if (!parent) {
-            fprintf(stderr, gettext("invalid object hierarchy: %s\n"), block_name(name, 0, NULL));
-            return CR_ERROR_GRAMMAR;
-        }
-        return block_create(p, name, parent);
+        return block_create(p, name, -1, parent);
     }
     return CR_ERROR_NONE;
 }
@@ -438,8 +449,12 @@ int import(gamedata *gd, FILE *in, const char *filename)
     CR_ParserFree(cp);
 
     gd_update(&state);
+    while (state.stack_top > 0) {
+        --state.stack_top;
+        cJSON_Delete(state.stack[state.stack_top].object);
+    }
     if (state.turn > game_get_turn(gd)) {
         game_set_turn(gd, state.turn);
     }
-    return 0;
+    return game_save(gd);
 }
