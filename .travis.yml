@@ -1,5 +1,19 @@
 sudo: false
 language: c
+jobs:
+  include:
+    - stage: install
+      script: which cppcheck
+      if: os = macos
+    - stage: analzye
+      script: s/cppcheck
+    - stage: build
+      script: s/build
+    - stage: test
+      script: build/atl-cli help
+  exclude:
+    - os: macos
+      stage: analyze
 compiler:
   - gcc
   - clang
@@ -7,16 +21,15 @@ addons:
   homebrew:
     packages:
       - cppcheck
+    update: true
   apt:
     packages:
       - libbsd-dev
       - libsqlite3-dev
       - cppcheck
-    update: true
 script:
   - s/cppcheck
   - s/build
-osx_image: xcode10.1
 os:
   - linux
   - macos
