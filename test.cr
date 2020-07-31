@@ -47,7 +47,7 @@ PARTEI 2
 REGION 0 11
 441677996;id
 "Karnickelhügel";Name
-"Berge";Terrain
+"Wüste";Terrain
 137;Bauern
 RESOURCE 1352714618
 "Schößlinge";type

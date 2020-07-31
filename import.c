@@ -38,7 +38,7 @@ typedef struct parser_t {
     int stack_top;
     struct {
         cJSON *object;
-        const char*name;
+        const char *name;
     } stack[STACKSIZE];
 } parser_t;
 
