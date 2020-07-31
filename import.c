@@ -268,7 +268,7 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
     else { /* keyc == 0 */
         cJSON *parent = find_parent(p, name);
         if (!parent) {
-            fprintf(stderr, gettext("invalid object crschema at %s\n"), block_name(name, 0, NULL));
+            fprintf(stderr, gettext("invalid object hierarchy: %s\n"), block_name(name, 0, NULL));
             return CR_ERROR_GRAMMAR;
         }
         return block_create(p, name, parent);
@@ -304,7 +304,7 @@ static enum CR_Error handle_object(parser_t *p, const char *name, unsigned int k
             cJSON_AddNumberToObject(p->block, "id", keyv[0]);
         }
         else if (depth > p->top + 1) {
-            fprintf(stderr, gettext("invalid object crschema at %s\n"), block_name(name, keyc, keyv));
+            fprintf(stderr, gettext("invalid object hierarchy: %s\n"), block_name(name, keyc, keyv));
             return CR_ERROR_GRAMMAR;
         }
 
