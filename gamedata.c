@@ -201,6 +201,7 @@ gamedata *game_create(struct sqlite3 *db)
 {
     gamedata *gd = calloc(1, sizeof(gamedata));
     gd->db = db;
+    gd->turn = -1;
     db_load_terrains(gd->db, &gd->terrains);
     return gd;
 }
@@ -271,8 +272,9 @@ int game_load(gamedata *gd)
 
 int game_get_turn(struct gamedata *gd)
 {
-    if (gd->turn <= 0) {
-        gd->turn = atoi(config_get("turn", "0"));
+    if (gd->turn < 0) {
+        const char *cfg = config_get("turn", "0");
+        gd->turn = cfg ? atoi(cfg) : 0;
     }
     return gd->turn;
 }

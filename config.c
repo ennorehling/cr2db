@@ -46,10 +46,10 @@ const char *config_get(const char *key, const char *def)
     if (SQLITE_ROW == err) {
         return (const char *)sqlite3_column_text(g_stmt_select_config, 0);
     }
-    else {
-        return NULL;
+    else if (SQLITE_DONE == err) {
+        return def;
     }
-    return def;
+    return NULL;
 }
 
 int config_set(const char *key, const char *value)

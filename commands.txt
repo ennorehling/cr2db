@@ -1,2 +1,2 @@
-import-cr basemap.cr
+import-cr test.cr
 export-cr export.cr
