@@ -5,20 +5,17 @@ stages:
   - test
 jobs:
   include:
-    - os: osx
-      stage: check
-      install: brew install cppcheck
     - stage: check
       script: s/cppcheck
-    - stage: test
-      script: build/atl-cli help
   exclude:
     - os: osx
       stage: check
 compiler:
   - gcc
   - clang
-script: s/build
+script:
+  - s/build
+  - build/atl-cli help
 addons:
   apt:
     packages:
