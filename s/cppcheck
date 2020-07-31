@@ -1,8 +1,9 @@
 #!/bin/sh
 IGNORE=$(find . -name "*.test.c" | awk '{ print "-i"$1 }')
-
-cppcheck --force --quiet --error-exitcode=1 \
- --enable=warning,performance,portability \
+cppcheck --version
+cppcheck --force --error-exitcode=1 --template=gcc \
+ --std=c89 --quiet\
+ --enable=performance,portability \
  $IGNORE -icJSON -iclibs \
  -USTBDS_NO_SHORT_NAMES -USTBDS_UNIT_TESTS \
  -U_MSC_VER -UTODO -UHAVE_FCGI \

@@ -217,11 +217,20 @@ static int import_cr(struct gamedata *gd, int argc, char **argv) {
     return err;
 }
 
-int eval_command(struct gamedata *gd, int argc, char **argv) {
+static int print_usage(struct gamedata *gd, int argc, char **argv) {
+    (void)gd;
+    (void)argc;
+    (void)argv;
+    return usage();
+}
+
+int eval_command(struct gamedata *gd, int argc, char **argv)
+{
     struct process {
         const char *command;
         int(*eval)(struct gamedata *, int, char **);
     } procs[] = {
+        {"help", print_usage},
         {"export-cr", export_cr},
         {"export-map", NULL},
         {"import-cr", import_cr},
@@ -259,7 +268,7 @@ int main(int argc, char **argv) {
 
     config_init(g_db);
     gd = game_create(g_db);
-    if (i >= 1 && i <= argc) {
+    if (i >= 1 && i < argc) {
         err = eval_command(gd, argc-i, argv + i);
         if (err) return err;
     }

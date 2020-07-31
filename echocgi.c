@@ -1,9 +1,12 @@
+#ifdef HAVE_FCGI
 #include <fcgiapp.h>
 #include <stdio.h>
+#endif
 
 int main(void) {
-    int err, i = 0;
+#ifdef HAVE_FCGI
     FCGX_Request req;
+    int err, i = 0;
     err = FCGX_Init();
     err = FCGX_InitRequest(&req, 0, 0);
     while((err = FCGX_Accept_r(&req)) >= 0) {
@@ -16,5 +19,6 @@ int main(void) {
     }
 
     fprintf(stderr, "hellocgi done with err=%d\n", err);
+#endif
     return 0;
 }

@@ -15,7 +15,7 @@ compiler:
   - clang
 script:
   - s/build
-  - build/atl-cli help
+  - build/atl-cli
 addons:
   apt:
     packages:
@@ -25,3 +25,5 @@ addons:
 os:
   - linux
   - osx
+dist: bionic
+
