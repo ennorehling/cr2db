@@ -208,7 +208,9 @@ static int import_cr(struct gamedata *gd, int argc, char **argv) {
         }
     }
     err = import(gd, F, filename);
-    g_modified |= (err == 0);
+    if (err == 0) {
+        g_modified = true;
+    }
     if (F != stdin) {
         fclose(F);
     }
