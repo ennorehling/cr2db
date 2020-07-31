@@ -10,7 +10,7 @@ jobs:
     - stage: install
       script: brew install cppcheck
       if: os = macos
-    - stage: analzye
+    - stage: analyze
       script: s/cppcheck
     - stage: build
       script: s/build
@@ -32,9 +32,6 @@ addons:
 #    packages:
 #      - cppcheck
 #    update: yes
-script:
-  - s/cppcheck
-  - s/build
 os:
   - linux
   - macos
