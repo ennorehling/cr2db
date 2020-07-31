@@ -3,15 +3,20 @@ language: c
 compiler:
   - gcc
   - clang
-script:
-  - s/cppcheck
-  - s/build
 addons:
+  homebrew:
+    packages:
+      - cppcheck
   apt:
     packages:
       - libbsd-dev
       - libsqlite3-dev
       - cppcheck
+    update: true
+script:
+  - s/cppcheck
+  - s/build
+osx_image: xcode10.1
 os:
   - linux
   - macos
