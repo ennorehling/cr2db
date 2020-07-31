@@ -18,8 +18,7 @@ jobs:
 compiler:
   - gcc
   - clang
-script: 
-  - s/build
+script: s/build
 addons:
   apt:
     packages:
