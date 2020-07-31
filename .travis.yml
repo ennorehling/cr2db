@@ -1,21 +1,19 @@
 sudo: false
 language: c
-stages:
-  - install
+stages: 
   - analyze
   - build
-  - test
 jobs:
   include:
-    - stage: install
-      script: brew install cppcheck
-      if: os = macos
+    - os: macos
+      stage: analyze
+      install: brew install cppcheck
     - stage: analyze
       script: s/cppcheck
     - stage: build
-      script: s/build
-    - stage: test
-      script: build/atl-cli help
+      script: 
+        - s/build
+        - build/atl-cli help
   exclude:
     - os: macos
       stage: analyze
@@ -28,10 +26,6 @@ addons:
       - libbsd-dev
       - libsqlite3-dev
       - cppcheck
-#  homebrew:
-#    packages:
-#      - cppcheck
-#    update: yes
 os:
   - linux
   - macos
