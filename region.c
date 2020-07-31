@@ -83,10 +83,7 @@ void regions_add(regions *all, region *r)
 region *regions_get_xyz(regions *all, int x, int y, int z)
 {
     struct region_index_xyz *index;
-    struct region_xyz xyz = { 0 };
-    xyz.x = x;
-    xyz.y = y;
-    xyz.z = z;
+    struct region_xyz xyz = { x, y, z };
     index = stbds_hmgetp(all->hash_xyz, xyz);
     if (index) {
         return all->arr[index->value];
