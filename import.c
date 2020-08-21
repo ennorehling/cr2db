@@ -152,7 +152,7 @@ static enum CR_Error block_create(parser_t * p, const char *name, int key, cJSON
                         cJSON_AddItemToObject(parent, name, arr);
                     }
                     block = cJSON_CreateObject();
-                    cJSON_AddNumberToObject(block, "id", key);
+                    cJSON_AddNumberToObject(block, "_index", key);
                     cJSON_AddItemToArray(arr, block);
                 }
                 break;

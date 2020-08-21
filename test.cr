@@ -1,8 +1,18 @@
-﻿VERSION 66
-36;Basis
-0 1 2;home
+VERSION 66
 "UTF-8";charset
+"de";locale
 1;noskillpoints
+1597602269;date
+"Eressea";Spiel
+"Standard";Konfiguration
+"Hex";Koordinaten
+2500;max_units
+36;Basis
+1182;Runde
+2;Zeitalter
+"3.25.0";Build
+"eressea@kn-bremen.de";mailto
+"ERESSEA 2 BEFEHLE";mailcmd                               
 PARTEI 683844
 "Königreich von Troicent";Parteiname
 "troicent@t-online.de";email
@@ -47,8 +57,15 @@ PARTEI 2
 REGION 0 11
 441677996;id
 "Karnickelhügel";Name
-"Berge";Terrain
-137;Bauern
+"Ebene";Terrain
+9100;Bauern
+7436;Pferde
+14792154;Silber
+739607;Unterh
+227;Rekruten
+16;Lohn
+147;Baeume
+16;Schoesslinge
 RESOURCE 1352714618
 "Schößlinge";type
 4;number
@@ -82,7 +99,7 @@ BURG 802617
 3;Groesse
 EINHEIT 553084
 "Mierin";Name
-1045107;Partei
+2;Partei
 COMMANDS
 "UNTERHALTE"
 "LERNE \"Stangenwaffen\""
@@ -107,7 +124,7 @@ GEGENSTAENDE
 3;Eisen
 EINHEIT 532348
 "Wanderer";Name
-1045107;Partei
+1;Partei
 COMMANDS
 "LERNE Hiebwaffen"
 TALENTE
