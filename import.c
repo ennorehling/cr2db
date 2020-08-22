@@ -191,23 +191,6 @@ static enum CR_Error block_create(parser_t * p, const char *name, int key, cJSON
     return CR_ERROR_NONE;
 }
 
-static const char *block_name(const char * name, int keyc, int keyv[]) {
-    static char result[32];
-    if (keyc == 0) {
-        snprintf(result, sizeof(result), "%s", name);
-    }
-    else if (keyc == 1) {
-        snprintf(result, sizeof(result), "%s %d", name, keyv[0]);
-    }
-    else if (keyc == 2) {
-        snprintf(result, sizeof(result), "%s %d %d", name, keyv[0], keyv[1]);
-    }
-    else if (keyc >= 3) {
-        snprintf(result, sizeof(result), "%s %d %d %d", name, keyv[0], keyv[1], keyv[2]);
-    }
-    return result;
-}
-
 static cJSON *find_parent(parser_t *p, const char *name) {
     do {
         if (is_child(p, name)) {
