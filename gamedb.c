@@ -127,6 +127,7 @@ static int cb_walk_faction(void *udata, int ncols, char **values, char **names)
     faction cursor;
     struct walk_faction *ctx = (struct walk_faction *)udata;
 
+    memset(&cursor, 0, sizeof cursor);
     read_faction_row(&cursor, ncols, values, names);
     err = ctx->callback(&cursor, ctx->arg);
     free_faction(&cursor);
@@ -449,6 +450,7 @@ static int cb_walk_region(void *udata, int ncols, char **values, char **names)
     region cursor;
     struct walk_region *ctx = (struct walk_region *)udata;
 
+    memset(&cursor, 0, sizeof(cursor));
     read_region_row(&cursor, ncols, values, names);
     err = ctx->callback(&cursor, ctx->arg);
     free_region(&cursor);

@@ -55,8 +55,8 @@ region *create_region(cJSON *data)
 void free_region(region *r)
 {
     cJSON_Delete(r->data);
-    free(r->name);
     stb_sb_free(r->messages);
+    free(r->name);
 }
 
 void regions_free(regions *all)

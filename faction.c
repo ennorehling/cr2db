@@ -11,15 +11,16 @@
 void free_faction(faction *f)
 {
     cJSON_Delete(f->data);
+    stb_sb_free(f->messages);
     free(f->name);
     free(f->email);
-    stb_sb_free(f->messages);
 }
 
 faction *create_faction(cJSON *data)
 {
     faction * f = calloc(1, sizeof(faction));
     f->data = data;
+    f->messages = NULL;
     return f;
 }
 
