@@ -161,6 +161,9 @@
     <ClInclude Include="stb_ds.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="stretchy_buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="crschema.sql">

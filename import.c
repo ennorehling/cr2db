@@ -82,7 +82,10 @@ static const struct {
 };
 
 static void gd_update(parser_t *p) {
-    if (p->root) {
+    if (p->messages) {
+        p->messages = NULL;
+    }
+    else if (p->root) {
         if (p->faction) {
             faction_update(p->gd, p->faction, p->root);
             faction_add(p->gd, p->faction);
@@ -96,7 +99,6 @@ static void gd_update(parser_t *p) {
             p->region = NULL;
         }
     }
-    p->messages = NULL;
 }
 
 static bool is_child(parser_t *p, const char *name) {
@@ -325,8 +327,14 @@ static void handle_string(void *udata, const char *name, const char *value) {
     if (p->messages) {
         char *msg = *p->messages;
         if (strcmp("rendered", name) == 0) {
-            size_t len = strlen(value) + 1;
-            memcpy(stb_sb_add(msg, len), value, len);
+            size_t len = strlen(value);
+            char *tail;
+            if (msg != NULL) {
+                /* replace nul-terminator with newline */
+                stb_sb_last(msg) = '\n';
+            }
+            tail = stb_sb_add(msg, (int) len + 1);
+            memcpy(tail, value, len + 1);
             *p->messages = msg;
         }
     }
