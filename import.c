@@ -9,10 +9,11 @@
 #include "gamedata.h"
 #include "faction.h"
 #include "region.h"
-#include "message.h"
 #include "crfile.h"
 #include "gettext.h"
 #include "log.h"
+
+#include "stretchy_buffer.h"
 
 #include <crpat.h>
 #include <cJSON.h>
@@ -34,7 +35,7 @@ typedef struct parser_t {
     int turn;
     struct faction *faction;
     struct region *region;
-    struct message **messages;
+    char **messages;
     int stack_top;
     struct {
         cJSON *object;
@@ -225,16 +226,6 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
                     p->messages = NULL;
                 }
             }
-            if (p->messages) {
-                message * prev = *p->messages;
-                message * msg = calloc(1, sizeof(message));
-                msg->id = keyv[0];
-                if (prev) {
-                    prev->next = msg;
-                    p->messages = &prev->next;
-                }
-                *p->messages = msg;
-            }
         }
         else {
             cJSON *parent = find_parent(p, name);
@@ -332,12 +323,14 @@ static void handle_string(void *udata, const char *name, const char *value) {
     parser_t *p = (parser_t *)udata;
 
     if (p->messages) {
-        message *msg = *p->messages;
+        char *msg = *p->messages;
         if (strcmp("rendered", name) == 0) {
-            msg->text = str_strdup(value);
+            size_t len = strlen(value) + 1;
+            memcpy(stb_sb_add(msg, len), value, len);
+            *p->messages = msg;
         }
     }
-    if (p->block && p->block->type == cJSON_Object) {
+    else if (p->block && p->block->type == cJSON_Object) {
         cJSON_AddStringToObject(p->block, name, value);
     }
 }
@@ -345,17 +338,13 @@ static void handle_string(void *udata, const char *name, const char *value) {
 static void handle_number(void *udata, const char *name, long value) {
     parser_t *p = (parser_t *)udata;
 
-    if (p->messages) {
-        message *msg = *p->messages;
-        if (strcmp("type", name) == 0) {
-            msg->type = value;
+    if (NULL == p->messages) {
+        if (p->block) {
+            cJSON_AddNumberToObject(p->block, name, (double)value);
         }
-    }
-    else if (p->block) {
-        cJSON_AddNumberToObject(p->block, name, (double)value);
-    }
-    else if (strcmp("Runde", name) == 0) {
-        p->turn = value;
+        else if (strcmp("Runde", name) == 0) {
+            p->turn = value;
+        }
     }
 }
 

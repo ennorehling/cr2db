@@ -43,7 +43,7 @@ typedef struct region {
     struct building *buildings;
     struct ship *ships;
     struct unit *units;
-    struct message *messages;
+    char *messages;
     struct cJSON *data;
 } region;
 

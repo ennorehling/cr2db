@@ -1,6 +1,7 @@
 #include "faction.h"
 
 #include "stb_ds.h"
+#include "stretchy_buffer.h"
 
 #include <strings.h>
 #include <cJSON.h>
@@ -12,6 +13,7 @@ void free_faction(faction *f)
     cJSON_Delete(f->data);
     free(f->name);
     free(f->email);
+    stb_sb_free(f->messages);
 }
 
 faction *create_faction(cJSON *data)
