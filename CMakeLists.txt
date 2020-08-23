@@ -22,7 +22,7 @@ set (TARGETS echocgi ${TARGETS})
 endif (FCGI_FOUND)
 
 if (SQLITE3_FOUND)
-  add_executable (atl-cli atlcli.c stblibs.c import.c export.c log.c crfile.c gamedb.c gamedata.c config.c region.c faction.c unit.c ship.c building.c)
+  add_executable (atl-cli atlcli.c stblibs.c import.c export.c log.c crfile.c gamedb.c gamedata.c config.c message.c region.c faction.c unit.c ship.c building.c)
   target_link_libraries (atl-cli
     ${CLIBS_LIBRARIES}
     ${CRPAT_LIBRARIES}
@@ -87,6 +87,6 @@ elseif (APPLE)
     "-Wall -Wextra")
 else (MSVC)
   set_target_properties (${TARGETS} PROPERTIES COMPILE_FLAGS 
-    "-Wall -Wextra")
+    "-Wall -Wno-unused-function -Werror")
 endif(MSVC)
 

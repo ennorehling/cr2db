@@ -2,20 +2,14 @@ VERSION 66
 "UTF-8";charset
 "de";locale
 1;noskillpoints
-1597602269;date
-"Eressea";Spiel
-"Standard";Konfiguration
-"Hex";Koordinaten
-2500;max_units
-36;Basis
-1182;Runde
-2;Zeitalter
-"3.25.0";Build
-"eressea@kn-bremen.de";mailto
-"ERESSEA 2 BEFEHLE";mailcmd                               
+PARTEI 1045107
+"enno@example.com";email
+"TEAM HYLTEGATAN";Parteiname
+"de";locale
+8;age
 PARTEI 683844
-"Königreich von Troicent";Parteiname
-"troicent@t-online.de";email
+"Nasenbären";Parteiname
+"nasen@web.de";email
 "de";locale
 "";banner
 115;age
@@ -36,6 +30,14 @@ GRUPPE 17796
 ALLIANZ 1610124
 "Clan of Khasoc";Parteiname
 8;Status
+MESSAGE 642352448
+771334452;type
+"Spintax The Green (spin) verdient in Eternia (0,0) 50 Silber durch Zauberei.";rendered
+1339439;unit
+0 0 0;region
+50;amount
+50;wanted
+6;mode
 MESSAGE 56725696
 1740286322;type
 "Wanderer (berg) lernt viel schneller als gewöhnlich.";rendered
@@ -57,7 +59,7 @@ PARTEI 2
 REGION 0 11
 441677996;id
 "Karnickelhügel";Name
-"Ebene";Terrain
+"Wüste";Terrain
 9100;Bauern
 7436;Pferde
 14792154;Silber

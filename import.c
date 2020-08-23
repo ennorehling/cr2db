@@ -14,6 +14,9 @@
 #include "gettext.h"
 #include "log.h"
 
+#include "stretchy_buffer.h"
+#include "stb_ds.h"
+
 #include <crpat.h>
 #include <cJSON.h>
 #include <strings.h>
@@ -34,11 +37,12 @@ typedef struct parser_t {
     int turn;
     struct faction *faction;
     struct region *region;
+    char **text;
     struct message **messages;
     int stack_top;
     struct {
         cJSON *object;
-        const char*name;
+        const char *name;
     } stack[STACKSIZE];
 } parser_t;
 
@@ -81,7 +85,10 @@ static const struct {
 };
 
 static void gd_update(parser_t *p) {
-    if (p->root) {
+    if (p->text) {
+        p->text = NULL;
+    }
+    else if (p->root) {
         if (p->faction) {
             faction_update(p->gd, p->faction, p->root);
             faction_add(p->gd, p->faction);
@@ -95,7 +102,6 @@ static void gd_update(parser_t *p) {
             p->region = NULL;
         }
     }
-    p->messages = NULL;
 }
 
 static bool is_child(parser_t *p, const char *name) {
@@ -191,23 +197,6 @@ static enum CR_Error block_create(parser_t * p, const char *name, int key, cJSON
     return CR_ERROR_NONE;
 }
 
-static const char *block_name(const char * name, int keyc, int keyv[]) {
-    static char result[32];
-    if (keyc == 0) {
-        snprintf(result, sizeof(result), "%s", name);
-    }
-    else if (keyc == 1) {
-        snprintf(result, sizeof(result), "%s %d", name, keyv[0]);
-    }
-    else if (keyc == 2) {
-        snprintf(result, sizeof(result), "%s %d %d", name, keyv[0], keyv[1]);
-    }
-    else if (keyc >= 3) {
-        snprintf(result, sizeof(result), "%s %d %d %d", name, keyv[0], keyv[1], keyv[2]);
-    }
-    return result;
-}
-
 static cJSON *find_parent(parser_t *p, const char *name) {
     do {
         if (is_child(p, name)) {
@@ -243,14 +232,11 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
                 }
             }
             if (p->messages) {
-                message * prev = *p->messages;
-                message * msg = calloc(1, sizeof(message));
+                struct message *msg = stb_sb_add(*p->messages, 1);
                 msg->id = keyv[0];
-                if (prev) {
-                    prev->next = msg;
-                    p->messages = &prev->next;
-                }
-                *p->messages = msg;
+                msg->text = NULL;
+                msg->type = 0;
+                msg->attr = NULL;
             }
         }
         else {
@@ -349,12 +335,35 @@ static void handle_string(void *udata, const char *name, const char *value) {
     parser_t *p = (parser_t *)udata;
 
     if (p->messages) {
-        message *msg = *p->messages;
+        message *msg = &stb_sb_last(*p->messages);
+
         if (strcmp("rendered", name) == 0) {
             msg->text = str_strdup(value);
         }
+        else if (strcmp("type", name) == 0) {
+            msg->type = atoi(value);
+        }
+        else {
+            struct attr_value v;
+            v.valuestring = str_strdup(value);
+            v.valueint = 0;
+        }
     }
-    if (p->block && p->block->type == cJSON_Object) {
+    else if (p->text) {
+        char *text = *p->text;
+        if (strcmp("rendered", name) == 0) {
+            size_t len = strlen(value);
+            char *tail;
+            if (text  != NULL) {
+                /* replace nul-terminator with newline */
+                stb_sb_last(text) = '\n';
+            }
+            tail = stb_sb_add(text, (int) len + 1);
+            memcpy(tail, value, len + 1);
+            *p->text = text;
+        }
+    }
+    else if (p->block && p->block->type == cJSON_Object) {
         cJSON_AddStringToObject(p->block, name, value);
     }
 }
@@ -363,16 +372,25 @@ static void handle_number(void *udata, const char *name, long value) {
     parser_t *p = (parser_t *)udata;
 
     if (p->messages) {
-        message *msg = *p->messages;
+        message *msg = &stb_sb_last(*p->messages);
+
         if (strcmp("type", name) == 0) {
-            msg->type = value;
+            msg->type = (int) value;
+        }
+        else {
+            struct attr_value v;
+            v.valuestring = NULL;
+            v.valueint = value;
+            stbds_shput(msg->attr, name, v);
         }
     }
-    else if (p->block) {
-        cJSON_AddNumberToObject(p->block, name, (double)value);
-    }
-    else if (strcmp("Runde", name) == 0) {
-        p->turn = value;
+    else {
+        if (p->block) {
+            cJSON_AddNumberToObject(p->block, name, (double)value);
+        }
+        else if (strcmp("Runde", name) == 0) {
+            p->turn = value;
+        }
     }
 }
 

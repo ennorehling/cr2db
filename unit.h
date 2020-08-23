@@ -12,7 +12,7 @@ typedef struct unit {
     struct region *region;
     struct ship *ship;
     struct building *building;
-    char * name;
+    char * name; /* stretchy_buffer */
     char * orders;
     int race;
     struct cJSON *data;

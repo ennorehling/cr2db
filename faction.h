@@ -1,7 +1,6 @@
 #pragma once
 
 struct cJSON;
-struct message;
 
 typedef unsigned int faction_id;
 
@@ -9,7 +8,7 @@ typedef struct faction {
     faction_id id;
     char * name;
     char * email;
-    struct message *messages;
+    struct message *messages; /* stretchy_buffer */
     struct cJSON *data;
 } faction;
 

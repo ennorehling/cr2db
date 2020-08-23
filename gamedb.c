@@ -127,6 +127,7 @@ static int cb_walk_faction(void *udata, int ncols, char **values, char **names)
     faction cursor;
     struct walk_faction *ctx = (struct walk_faction *)udata;
 
+    memset(&cursor, 0, sizeof cursor);
     read_faction_row(&cursor, ncols, values, names);
     err = ctx->callback(&cursor, ctx->arg);
     free_faction(&cursor);
@@ -208,16 +209,8 @@ db_install_fail:
 
 static int db_upgrade(sqlite3 *db, int from_version, int to_version) {
     int err;
-    if (from_version == 0) {
+    if (from_version != to_version) {
         err = db_install(db, "crschema.sql");
-    }
-    else {
-        int i;
-        for (i = from_version + 1; i <= to_version; ++i) {
-            char filename[20];
-            snprintf(filename, sizeof(filename), "update%02d.sql", i);
-            err = db_install(db, filename);
-        }
     }
     return err;
 }
@@ -449,6 +442,7 @@ static int cb_walk_region(void *udata, int ncols, char **values, char **names)
     region cursor;
     struct walk_region *ctx = (struct walk_region *)udata;
 
+    memset(&cursor, 0, sizeof(cursor));
     read_region_row(&cursor, ncols, values, names);
     err = ctx->callback(&cursor, ctx->arg);
     free_region(&cursor);

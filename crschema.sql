@@ -18,7 +18,7 @@ INSERT INTO terrains (name, crname) VALUES ('firewall', 'Feuerwand');
 INSERT INTO terrains (name, crname) VALUES ('glacier', 'Gletscher');
 INSERT INTO terrains (name, crname) VALUES ('plain', 'Ebene');
 INSERT INTO terrains (name, crname) VALUES ('swamp', 'Sumpf');
-INSERT INTO terrains (name, crname) VALUES ('desert', 'W�ste');
+INSERT INTO terrains (name, crname) VALUES ('desert', 'Wüste');
 INSERT INTO terrains (name, crname) VALUES ('packice', 'Packeis');
 INSERT INTO terrains (name, crname) VALUES ('highland', 'Hochland');
 INSERT INTO terrains (name, crname) VALUES ('mountain', 'Berge');
@@ -43,7 +43,6 @@ CREATE TABLE regions (
 
 DROP INDEX IF EXISTS regions_xyp;
 DROP INDEX IF EXISTS regions_xyz;
-CREATE INDEX IF NOT EXISTS regions_id ON regions (id);
 
 DROP TABLE IF EXISTS factions;
 CREATE TABLE factions (
@@ -92,8 +91,16 @@ CREATE TABLE messages (
     id INTEGER NOT NULL PRIMARY KEY,
     type INTEGER,
     region_id INTEGER,
+    faction_id INTEGER,
     text TEXT,
+    data BLOB,
     FOREIGN KEY(region_id) REFERENCES regions(id)
+    FOREIGN KEY(faction_id) REFERENCES factions(id)
 );
 
-PRAGMA user_version = 1;
+DROP INDEX IF EXISTS messages_region_id;
+CREATE INDEX messages_region_id ON messages (region_id);
+DROP INDEX IF EXISTS messages_faction_id;
+CREATE INDEX messages_faction_id ON messages (faction_id);
+
+PRAGMA user_version = 2;

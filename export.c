@@ -4,6 +4,10 @@
 #include "gamedb.h"
 #include "faction.h"
 #include "region.h"
+#include "message.h"
+
+#include "stb_ds.h"
+#include "stretchy_buffer.h"
 
 #include <cJSON.h>
 
@@ -53,12 +57,39 @@ static void json_to_cr(cJSON *json, FILE *F)
     }
 }
 
+static void cr_messages(FILE * F, struct message *messages) {
+    int i, len = stb_sb_count(messages);
+    for (i = 0; i != len; ++i) {
+        message *msg = messages + i;
+        int a, nattr = stbds_shlen(msg->attr);
+        fprintf(F, "MESSAGE %d\n%d;type\n\"%s\";rendered", msg->id, msg->type, msg->text);
+        for (a = 0; a != nattr; ++a) {
+            struct message_attr *attr = msg->attr + a;
+            if (attr->value.valuestring) {
+                if (0 == strcmp("region", attr->key)) {
+                    /* the stupid way to reference a region */
+                    fprintf(F, "%s;%s\n", attr->value.valuestring, attr->key);
+                }
+                else {
+                    fprintf(F, "\"%s\";%s\n", attr->value.valuestring, attr->key);
+                }
+            }
+            else {
+                fprintf(F, "%d;%s\n", attr->value.valueint, attr->key);
+            }
+        }
+    }
+}
+
 static int cr_faction(faction *f, void *arg)
 {
     FILE * F = (FILE *)arg;
     fprintf(F, "PARTEI %u\n", f->id);
     if (f->data) {
         json_to_cr(f->data, F);
+    }
+    if (f->messages) {
+        cr_messages(F, f->messages);
     }
     return 0;
 }
@@ -74,6 +105,9 @@ static int cr_region(region *r, void *arg)
     }
     if (r->data) {
         json_to_cr(r->data, F);
+    }
+    if (r->messages) {
+        cr_messages(F, r->messages);
     }
     return 0;
 }
