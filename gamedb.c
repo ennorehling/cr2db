@@ -208,11 +208,10 @@ db_install_fail:
 }
 
 static int db_upgrade(sqlite3 *db, int from_version, int to_version) {
-    int err;
     if (from_version != to_version) {
-        err = db_install(db, "crschema.sql");
+        return db_install(db, "crschema.sql");
     }
-    return err;
+    return 0;
 }
 
 static int cb_int_col(void *data, int ncols, char **text, char **name) {
