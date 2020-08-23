@@ -62,7 +62,7 @@ static void cr_messages(FILE * F, struct message *messages) {
     for (i = 0; i != len; ++i) {
         message *msg = messages + i;
         int a, nattr = stbds_shlen(msg->attr);
-        fprintf(F, "MESSAGE %d\n%d;type\n\"%s\";rendered", msg->id, msg->type, msg->text);
+        fprintf(F, "MESSAGE %d\n%d;type\n\"%s\";rendered\n", msg->id, msg->type, msg->text);
         for (a = 0; a != nattr; ++a) {
             struct message_attr *attr = msg->attr + a;
             if (attr->value.valuestring) {
@@ -112,15 +112,32 @@ static int cr_region(region *r, void *arg)
     return 0;
 }
 
+static void cr_header(struct gamedata *gd, FILE *F)
+{
+    assert(gd);
+    fprintf(F, "VERSION 66\n36;Basis\n\"UTF-8\";charset\n%d;Runde\n", game_get_turn(gd));
+}
+
 int export_db(struct gamedata *gd, FILE *F)
 {
     int err;
     assert(gd);
 
-    fprintf(F, "VERSION 66\n36;Basis\n\"UTF-8\";charset\n%d;Runde\n", game_get_turn(gd));
+    cr_header(gd, F);
     err = db_factions_walk(gd->db, cr_faction, F);
     if (err != 0) return err;
     err = db_regions_walk(gd->db, cr_region, F);
+    if (err != 0) return err;
+    return 0;
+}
+
+int export_gd(struct gamedata *gd, FILE *F)
+{
+    int err;
+    cr_header(gd, F);
+    err = factions_walk(gd, cr_faction, F);
+    if (err != 0) return err;
+    err = regions_walk(gd, cr_region, F);
     if (err != 0) return err;
     return 0;
 }

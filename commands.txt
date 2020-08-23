@@ -1,2 +1,3 @@
-import-cr test.cr
-export-cr export.cr
+rewrite-cr test.cr export.cr
+#import-cr test.cr
+#export-cr export.cr

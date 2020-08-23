@@ -39,6 +39,7 @@ static int usage(void) {
     fputs("  -d dbname  game database name.\n", stderr);
     fputs("\nCOMMANDS\n", stderr);
     fputs("  script [filename]\n\texecute commands from a script.\n", stderr);
+    fputs("  rewrite-cr infile outfile\n\tparse CR and dump the result.\n", stderr);
     fputs("  import-cr [filename]\n\timport CR from a file.\n", stderr);
     fputs("  export-cr [filename]\n\texport game data to a CR file.\n", stderr);
     fputs("  export-map [filename]\n\texport map data only to a CR file.\n", stderr);
@@ -217,6 +218,45 @@ static int import_cr(struct gamedata *gd, int argc, char **argv) {
     return err;
 }
 
+static int rewrite_cr(struct gamedata *gd, int argc, char **argv) {
+    const char *filename = "stdin";
+    FILE *IN = stdin, *OUT = stdout;
+    int err;
+
+    if (argc > 0) {
+        filename = argv[0];
+        IN = fopen(filename, "rt");
+        if (!IN) {
+            perror(filename);
+            return errno;
+        }
+    }
+    if (argc > 1) {
+        OUT = fopen(argv[1], "wt");
+        if (!OUT) {
+            perror(argv[1]);
+            return errno;
+        }
+    }
+    err = import(gd, IN, filename);
+    if (err != 0) {
+        goto rewrite_fail;
+    }
+    err = export_gd(gd, OUT);
+    if (err != 0) {
+        goto rewrite_fail;
+    }
+
+rewrite_fail:
+    if (IN != stdin) {
+        fclose(IN);
+    }
+    if (OUT != stdout) {
+        fclose(OUT);
+    }
+    return err;
+}
+
 static int print_usage(struct gamedata *gd, int argc, char **argv) {
     (void)gd;
     (void)argc;
@@ -233,6 +273,7 @@ int eval_command(struct gamedata *gd, int argc, char **argv)
         {"help", print_usage},
         {"export-cr", export_cr},
         {"export-map", NULL},
+        {"rewrite-cr", rewrite_cr},
         {"import-cr", import_cr},
         {"script", eval_script},
         {NULL, NULL}

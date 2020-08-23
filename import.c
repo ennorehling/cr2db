@@ -94,12 +94,14 @@ static void gd_update(parser_t *p) {
             faction_add(p->gd, p->faction);
             p->root = NULL;
             p->faction = NULL;
+            p->messages = NULL;
         }
         if (p->region) {
             region_update(p->gd, p->region, p->root);
             region_add(p->gd, p->region);
             p->root = NULL;
             p->region = NULL;
+            p->messages = NULL;
         }
     }
 }
@@ -344,9 +346,11 @@ static void handle_string(void *udata, const char *name, const char *value) {
             msg->type = atoi(value);
         }
         else {
+            char * key = str_strdup(name);
             struct attr_value v;
             v.valuestring = str_strdup(value);
             v.valueint = 0;
+            stbds_shput(msg->attr, key, v);
         }
     }
     else if (p->text) {
@@ -378,10 +382,11 @@ static void handle_number(void *udata, const char *name, long value) {
             msg->type = (int) value;
         }
         else {
+            char * key = str_strdup(name);
             struct attr_value v;
             v.valuestring = NULL;
             v.valueint = value;
-            stbds_shput(msg->attr, name, v);
+            stbds_shput(msg->attr, key, v);
         }
     }
     else {

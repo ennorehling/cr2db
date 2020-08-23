@@ -57,17 +57,17 @@ PARTEI 2
 "- Katja Zedel";banner
 "de";locale
 REGION 0 11
-441677996;id
-"Karnickelhügel";Name
+284083814;id
+"Rif Londaren'Cor";Name
 "Wüste";Terrain
-9100;Bauern
-7436;Pferde
-14792154;Silber
-739607;Unterh
-227;Rekruten
-16;Lohn
-147;Baeume
-16;Schoesslinge
+"Rif Londaren'Cor - Ein alter mächtiger Name aus längst vergangener Zeit. Für die Zwerge ist es die Heimat der Scarra-Falken. Die Elfen nennen die gewaltige Wüste 'Thera'Se Ni'Char' - Land des blutigen Weges.";Beschr
+200;Bauern
+0;Pferde
+563753;Silber
+28187;Unterh
+5;Rekruten
+13;Lohn
+3;Schoesslinge
 RESOURCE 1352714618
 "Schößlinge";type
 4;number
