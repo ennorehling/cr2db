@@ -4,6 +4,7 @@ struct cJSON;
 struct building;
 struct ship;
 struct unit;
+struct message;
 
 typedef unsigned int terrain_id;
 
@@ -43,7 +44,7 @@ typedef struct region {
     struct building *buildings;
     struct ship *ships;
     struct unit *units;
-    char *messages;
+    struct message *messages; /* stretchy_buffer */
     struct cJSON *data;
 } region;
 

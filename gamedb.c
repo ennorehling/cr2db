@@ -209,16 +209,8 @@ db_install_fail:
 
 static int db_upgrade(sqlite3 *db, int from_version, int to_version) {
     int err;
-    if (from_version == 0) {
+    if (from_version != to_version) {
         err = db_install(db, "crschema.sql");
-    }
-    else {
-        int i;
-        for (i = from_version + 1; i <= to_version; ++i) {
-            char filename[20];
-            snprintf(filename, sizeof(filename), "update%02d.sql", i);
-            err = db_install(db, filename);
-        }
     }
     return err;
 }

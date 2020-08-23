@@ -123,6 +123,7 @@
     <ClCompile Include="gamedb.c" />
     <ClCompile Include="import.c" />
     <ClCompile Include="log.c" />
+    <ClCompile Include="message.c" />
     <ClCompile Include="region.c" />
     <ClCompile Include="ship.c" />
     <ClCompile Include="stblibs.c" />
@@ -150,6 +151,7 @@
     <ClInclude Include="gettext.h" />
     <ClInclude Include="import.h" />
     <ClInclude Include="log.h" />
+    <ClInclude Include="message.h" />
     <ClInclude Include="region.h" />
     <ClInclude Include="request.h" />
     <ClInclude Include="ship.h" />

@@ -81,6 +81,9 @@
     <ClCompile Include="stblibs.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="message.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cgi.h">
@@ -162,6 +165,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stretchy_buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="message.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

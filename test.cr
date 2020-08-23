@@ -31,6 +31,14 @@ GRUPPE 17796
 ALLIANZ 1610124
 "Clan of Khasoc";Parteiname
 8;Status
+MESSAGE 642352448
+771334452;type
+"Spintax The Green (spin) verdient in Eternia (0,0) 50 Silber durch Zauberei.";rendered
+1339439;unit
+0 0 0;region
+50;amount
+50;wanted
+6;mode
 MESSAGE 56725696
 1740286322;type
 "Wanderer (berg) lernt viel schneller als gewöhnlich.";rendered
