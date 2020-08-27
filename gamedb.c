@@ -130,7 +130,7 @@ static int cb_walk_faction(void *udata, int ncols, char **values, char **names)
     memset(&cursor, 0, sizeof cursor);
     read_faction_row(&cursor, ncols, values, names);
     err = ctx->callback(&cursor, ctx->arg);
-    free_faction(&cursor);
+    faction_free(&cursor);
     return err;
 }
 
@@ -142,37 +142,35 @@ int db_factions_walk(struct sqlite3 *db, int(*callback)(struct faction *, void *
     return sqlite3_exec(db, "SELECT `data`, `id`, `name`, `email` FROM `factions`", cb_walk_faction, &ctx, NULL);
 }
 
-faction *db_read_faction(sqlite3 *db, unsigned int id) {
+int db_read_faction(sqlite3 *db, faction *f)
+{
     int err;
     const void *data;
 
+    assert(f);
+    assert(f->id > 0);
     err = sqlite3_reset(g_stmt_select_faction);
     if (err != SQLITE_OK) goto db_read_faction_fail;
-    err = sqlite3_bind_int64(g_stmt_select_faction, 1, (sqlite3_int64)id);
+    err = sqlite3_bind_int64(g_stmt_select_faction, 1, (sqlite3_int64)f->id);
     if (err != SQLITE_OK) goto db_read_faction_fail;
     err = sqlite3_step(g_stmt_select_faction);
     if (err == SQLITE_DONE) {
-        return NULL;
+        /* no such database entry */
+        return SQLITE_DONE;
     }
     else if (err != SQLITE_ROW) goto db_read_faction_fail;
     data = sqlite3_column_blob(g_stmt_select_faction, 0);
     if (data) {
-        cJSON *json = cJSON_Parse(data);
-        if (json) {
-            faction *f = create_faction(json);
-            if (f) {
-                f->id = id;
-                f->name = str_strdup((const char *) sqlite3_column_text(g_stmt_select_faction, 1));
-                f->email = str_strdup((const char *) sqlite3_column_text(g_stmt_select_faction, 2));
-            }
-            return f;
-        }
+        f->data = cJSON_Parse(data);
     }
-    return NULL;
+    f->name = str_strdup((const char *) sqlite3_column_text(g_stmt_select_faction, 1));
+    f->email = str_strdup((const char *) sqlite3_column_text(g_stmt_select_faction, 2));
+
+    return SQLITE_OK;
 
 db_read_faction_fail:
     fputs(sqlite3_errmsg(db), stderr);
-    return NULL;
+    return err;
 }
 
 static int db_install(sqlite3 *db, const char *schema) {
@@ -444,7 +442,7 @@ static int cb_walk_region(void *udata, int ncols, char **values, char **names)
     memset(&cursor, 0, sizeof(cursor));
     read_region_row(&cursor, ncols, values, names);
     err = ctx->callback(&cursor, ctx->arg);
-    free_region(&cursor);
+    region_free(&cursor);
     return err;
 }
 
@@ -456,7 +454,8 @@ int db_regions_walk(struct sqlite3 *db, int(*callback)(struct region *, void *),
     return sqlite3_exec(db, "SELECT `data`, `id`, `x`, `y`, `z`, `terrain_id`, `name` FROM `regions`", cb_walk_region, &ctx, NULL);
 }
 
-int db_read_region(struct sqlite3 *db, region *r) {
+int db_read_region(struct sqlite3 *db, region *r)
+{
     int err;
     const void *data;
 
@@ -468,19 +467,18 @@ int db_read_region(struct sqlite3 *db, region *r) {
     if (err != SQLITE_OK) goto db_read_region_fail;
     err = sqlite3_step(g_stmt_select_region);
     if (err == SQLITE_DONE) {
-        return SQLITE_NOTFOUND;
+        /* no matching row */
+        return err;
     }
     else if (err != SQLITE_ROW) goto db_read_region_fail;
     data = sqlite3_column_blob(g_stmt_select_region, 0);
     if (data) {
-        cJSON *json = cJSON_Parse(data);
-        if (json) {
-            r->id = sqlite3_column_int(g_stmt_select_region, 1);
-            r->terrain = sqlite3_column_int(g_stmt_select_region, 2);
-            free(r->name);
-            r->name = str_strdup(sqlite3_column_blob(g_stmt_select_region, 3));
-        }
+        r->data = cJSON_Parse(data);
     }
+    r->id = sqlite3_column_int(g_stmt_select_region, 1);
+    r->terrain = sqlite3_column_int(g_stmt_select_region, 2);
+    free(r->name);
+    r->name = str_strdup(sqlite3_column_blob(g_stmt_select_region, 3));
     return SQLITE_OK;
 
 db_read_region_fail:
@@ -556,7 +554,7 @@ int db_load_map(struct sqlite3 *db, regions *list)
             return SQLITE_OK;
         }
         else if (err == SQLITE_ROW) {
-            region *r = create_region(NULL);
+            region *r = create_region();
             r->id = sqlite3_column_int(g_stmt_select_all_regions_meta, 0);
             r->loc.x = sqlite3_column_int(g_stmt_select_all_regions_meta, 1);
             r->loc.y = sqlite3_column_int(g_stmt_select_all_regions_meta, 2);
@@ -590,7 +588,7 @@ int db_load_factions(struct sqlite3 *db, factions *list)
             return SQLITE_OK;
         }
         else if (err == SQLITE_ROW) {
-            faction *f = create_faction(NULL);
+            faction *f = create_faction();
             f->id = sqlite3_column_int(g_stmt_select_all_factions_meta, 0);
             f->name = str_strdup((const char *) sqlite3_column_text(g_stmt_select_all_factions_meta, 1));
             f->email = str_strdup((const char *) sqlite3_column_text(g_stmt_select_all_factions_meta, 2));

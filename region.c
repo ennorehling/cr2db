@@ -47,14 +47,13 @@ const terrain *terrains_get_crname(terrains *all, const char *crname)
     return NULL;
 }
 
-region *create_region(cJSON *data)
+region *create_region(void)
 {
     region *r = calloc(1, sizeof(region));
-    r->data = data;
     return r;
 }
 
-void free_region(region *r)
+void region_free(region *r)
 {
     int i, count = stb_sb_count(r->messages);
     for (i = 0; i != count; ++i) {
@@ -69,7 +68,7 @@ void regions_free(regions *all)
 {
     int i, len = stbds_arrlen(all->arr);
     for (i = 0; i != len; ++i) {
-        free_region(all->arr[i]);
+        region_free(all->arr[i]);
         free(all->arr[i]);
     }
     stbds_arrfree(all->arr);

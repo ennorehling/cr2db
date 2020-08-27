@@ -8,6 +8,9 @@
 
 #include "gamedata.h"
 #include "faction.h"
+#include "unit.h"
+#include "ship.h"
+#include "building.h"
 #include "region.h"
 #include "message.h"
 #include "crfile.h"
@@ -37,6 +40,9 @@ typedef struct parser_t {
     int turn;
     struct faction *faction;
     struct region *region;
+    struct unit *unit;
+    struct ship *ship;
+    struct building *building;
     char **text;
     struct message **messages;
     int stack_top;
@@ -47,13 +53,13 @@ typedef struct parser_t {
 } parser_t;
 
 static struct crschema {
-    const char *parent, *children[8];
+    const char *parent, *children[10];
 } g_crschema[] = {
     {"PARTEI", {"ALLIANZ", "GEGENSTAENDE", "GRUPPE", "MESSAGE", "OPTIONEN", NULL}},
     {"BATTLE", {"MESSAGE", NULL}},
     {"GRUPPE", {"ALLIANZ", NULL}},
     {"EINHEIT", {"COMMANDS", "EFFECTS", "GEGENSTAENDE", "KAMPFZAUBER", "SPRUECHE", "TALENTE", NULL}},
-    {"REGION", {"DURCHREISE", "DURCHSCHIFFUNG", "GRENZE", "PREISE", "RESOURCE", NULL}},
+    {"REGION", {"EINHEIT", "BURG", "SCHIFF", "DURCHREISE", "DURCHSCHIFFUNG", "GRENZE", "PREISE", "RESOURCE", NULL}},
     {"BURG", {"EFFECTS", NULL}},
     {"SCHIFF", {"EFFECTS", NULL}},
     {"MESSAGETYPE", {NULL}},
@@ -81,6 +87,7 @@ static const struct {
     { "TRANSLATION", TYPE_OBJECT },
     { "PREISE", TYPE_OBJECT },
     { "TALENTE", TYPE_OBJECT },
+    { "MESSAGETYPE", TYPE_MAP },
     { NULL, TYPE_OBJECT },
 };
 
@@ -90,15 +97,15 @@ static void gd_update(parser_t *p) {
     }
     else if (p->root) {
         if (p->faction) {
-            faction_update(p->gd, p->faction, p->root);
-            faction_add(p->gd, p->faction);
+            gd_update_faction(p->gd, p->faction, p->root);
+            gd_add_faction(p->gd, p->faction);
             p->root = NULL;
             p->faction = NULL;
             p->messages = NULL;
         }
-        if (p->region) {
-            region_update(p->gd, p->region, p->root);
-            region_add(p->gd, p->region);
+        else if (p->region) {
+            gd_update_region(p->gd, p->region, p->root);
+            gd_add_region(p->gd, p->region);
             p->root = NULL;
             p->region = NULL;
             p->messages = NULL;
@@ -212,7 +219,7 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
     cJSON * block = NULL;
     if (keyc == 1) {
         if (strcmp("PARTEI", name) == 0) {
-            faction *f = create_faction(NULL);
+            faction *f = create_faction();
             f->id = keyv[0];
             gd_update(p);
             p->root = block = cJSON_CreateObject();
@@ -248,7 +255,7 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
     }
     else if (keyc > 1) {
         if (strcmp("REGION", name) == 0) {
-            region *r = create_region(NULL);
+            region *r = create_region();
             r->loc.x = keyv[0];
             r->loc.y = keyv[1];
             r->loc.z = (keyc > 2) ? keyv[2] : 0;
@@ -409,11 +416,11 @@ static void handle_text(void *udata, const char *text) {
 
 static void free_state(parser_t *p) {
     if (p->faction) {
-        free_faction(p->faction);
+        faction_free(p->faction);
         free(p->faction);
     }
     if (p->region) {
-        free_region(p->region);
+        region_free(p->region);
         free(p->region);
     }
     cJSON_Delete(p->root);

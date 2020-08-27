@@ -12,8 +12,8 @@ typedef struct faction {
     struct cJSON *data;
 } faction;
 
-void free_faction(faction *f);
-faction *create_faction(struct cJSON *data);
+void faction_free(faction *f);
+faction *create_faction(void);
 
 struct faction_index_uid {
     faction_id key;

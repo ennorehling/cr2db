@@ -9,6 +9,7 @@
 #include "config.h"
 
 #include "stb_ds.h"
+#include "stretchy_buffer.h"
 
 #include <strings.h>
 #include <cJSON.h>
@@ -42,88 +43,99 @@ int regions_walk(struct gamedata *gd, int (*callback)(struct region *, void *), 
     return 0;
 }
 
-static void update_faction(gamedata *gd, faction *f, cJSON *data)
+void gd_add_faction(gamedata *gd, faction *f)
+{
+    factions_add(&gd->factions, f);
+}
+
+faction *gd_create_faction(gamedata *gd, cJSON *data)
+{
+    faction * f = create_faction();
+    gd_update_faction(gd, f, data);
+    gd_add_faction(gd, f);
+    return f;
+}
+
+void gd_update_faction(gamedata *gd, faction *f, cJSON *data)
 {
     (void)gd;
-
+    assert(f);
     if (f->data != data) {
-        cJSON **p_child = &data->child;
-        while (*p_child) {
-            cJSON *child = *p_child;
-            if (child->type == cJSON_Number) {
-                if (f->id == 0 && strcmp(child->string, "id") == 0) {
-                    f->id = child->valueint;
-                    *p_child = child->next;
-                    child->next = NULL;
-                    cJSON_Delete(child);
-                    continue;
+        if (data) {
+            cJSON **p_child = &data->child;
+            while (*p_child) {
+                cJSON *child = *p_child;
+                if (child->type == cJSON_Number) {
+                    if (f->id == 0 && strcmp(child->string, "id") == 0) {
+                        f->id = child->valueint;
+                        *p_child = child->next;
+                        child->next = NULL;
+                        cJSON_Delete(child);
+                        continue;
+                    }
                 }
+                else if (child->type == cJSON_String) {
+                    if (strcmp(child->string, "Parteiname") == 0) {
+                        free(f->name);
+                        f->name = str_strdup(child->valuestring);
+                    }
+                    else if (strcmp(child->string, "email") == 0) {
+                        free(f->email);
+                        f->email = str_strdup(child->valuestring);
+                    }
+                }
+                p_child = &child->next;
             }
-            else if (child->type == cJSON_String) {
-                if (strcmp(child->string, "Parteiname") == 0) {
-                    free(f->name);
-                    f->name = str_strdup(child->valuestring);
-                }
-                else if (strcmp(child->string, "email") == 0) {
-                    free(f->email);
-                    f->email = str_strdup(child->valuestring);
-                }
-            }
-            p_child = &child->next;
         }
         cJSON_Delete(f->data);
         f->data = data;
     }
 }
 
-void faction_add(gamedata *gd, faction *f)
+void gd_add_region(gamedata *gd, region *r)
 {
-    factions_add(&gd->factions, f);
+    regions_add(&gd->regions, r);
 }
 
-faction *faction_create(gamedata *gd, cJSON *data)
-{
-    faction * f = create_faction(NULL);
-    if (f) {
-        update_faction(gd, f, data);
-    }
-    return f;
+region *gd_create_region(gamedata *gd, cJSON *data) {
+    region *r = create_region();
+    gd_update_region(gd, r, data);
+    gd_add_region(gd, r);
+    return r;
 }
 
-void faction_update(gamedata *gd, faction *f, cJSON *data)
+void gd_update_region(struct gamedata *gd, struct region *r, struct cJSON *data)
 {
-    update_faction(gd, f, data);
-}
-
-static void update_region(gamedata *gd, region *r, cJSON *data)
-{
-    assert(data);
+    assert(gd);
+    assert(r);
     if (r->data != data) {
-        cJSON * child;
-        for (child = data->child; child != NULL; child = child->next) {
-            if (r->id == 0 && child->type == cJSON_Number) {
-                if (strcmp(child->string, "id") == 0) {
-                    r->id = child->valueint;
+        if (data) {
+            cJSON * child;
+            for (child = data->child; child != NULL; child = child->next) {
+                if (r->id == 0 && child->type == cJSON_Number) {
+                    if (strcmp(child->string, "id") == 0) {
+                        r->id = child->valueint;
+                    }
+                    else if (strcmp(child->string, "x") == 0) {
+                        r->loc.x = child->valueint;
+                    }
+                    else if (strcmp(child->string, "y") == 0) {
+                        r->loc.y = child->valueint;
+                    }
+                    else if (strcmp(child->string, "z") == 0) {
+                        r->loc.z = child->valueint;
+                    }
                 }
-                else if (strcmp(child->string, "x") == 0) {
-                    r->loc.x = child->valueint;
-                }
-                else if (strcmp(child->string, "y") == 0) {
-                    r->loc.y = child->valueint;
-                }
-                else if (strcmp(child->string, "z") == 0) {
-                    r->loc.z = child->valueint;
-                }
-            }
-            else if (child->type == cJSON_String) {
-                if (strcmp(child->string, "Name") == 0) {
-                    r->name = str_strdup(child->valuestring);
-                }
-                if (strcmp(child->string, "Terrain") == 0) {
-                    const char *crname = child->valuestring;
-                    const terrain *t = terrains_get_crname(&gd->terrains, crname);
-                    if (t) {
-                        r->terrain = t->id;
+                else if (child->type == cJSON_String) {
+                    if (strcmp(child->string, "Name") == 0) {
+                        r->name = str_strdup(child->valuestring);
+                    }
+                    if (strcmp(child->string, "Terrain") == 0) {
+                        const char *crname = child->valuestring;
+                        const terrain *t = terrains_get_crname(&gd->terrains, crname);
+                        if (t) {
+                            r->terrain = t->id;
+                        }
                     }
                 }
             }
@@ -133,68 +145,60 @@ static void update_region(gamedata *gd, region *r, cJSON *data)
     }
 }
 
-void region_add(gamedata *gd, region *r)
-{
-    regions_add(&gd->regions, r);
-}
-
-region *region_create(gamedata *gd, cJSON *data) {
-    region *r = create_region(NULL);
-    if (r) {
-        update_region(gd, r, data);
-    }
-    return r;
-}
-
-void region_update(gamedata *gd, region *r, cJSON *data)
-{
-    update_region(gd, r, data);
-}
-
 void region_reset(struct gamedata *gd, struct region *r)
 {
+    int i;
     assert(gd);
-    while (r->buildings) {
-        building *c = r->buildings;
-        r->buildings = c->next;
-        free_building(c);
+    for (i = stb_sb_count(r->buildings) - 1; i; --i) {
+        free_building(r->buildings[i]);
     }
-    while (r->ships) {
-        ship *c = r->ships;
-        r->ships = c->next;
-        free_ship(c);
+    stb_sb_free(r->buildings);
+    for (i = stb_sb_count(r->ships) - 1; i; --i) {
+        free_ship(r->ships[i]);
     }
-    while (r->units) {
-        unit *u = r->units;
-        r->units = u->next;
-        free_unit(u);
+    stb_sb_free(r->ships);
+    for (i = stb_sb_count(r->units) - 1; i; --i) {
+        free_unit(r->units[i]);
     }
+    stb_sb_free(r->units);
 }
 
 struct unit *unit_create(struct gamedata *gd, struct region *r, struct cJSON *data)
 {
     unit * u = create_unit(data);
     assert(gd);
+    assert(r);
     if (u) {
         u->region = r;
+        stb_sb_push(r->units, u);
     }
     return u;
 }
 
 struct ship *ship_create(struct gamedata *gd, struct region *r, struct cJSON *data)
 {
-    (void)data;
-    assert(r);
+    ship *sh = calloc(1, sizeof(ship));
     assert(gd);
-    return NULL;
+    assert(r);
+    if (sh) {
+        sh->data = data;
+        sh->region = r;
+        stb_sb_push(r->ships, sh);
+    }
+    return sh;
 }
 
 struct building *building_create(struct gamedata *gd, struct region *r, struct cJSON *data)
 {
-    (void)data;
-    assert(r);
+    building *b = calloc(1, sizeof(building));
     assert(gd);
-    return NULL;
+    assert(r);
+    if (b) {
+        b->data = data;
+        b->region = r;
+        stb_sb_push(r->buildings, b);
+    }
+    return b;
 }
 
 gamedata *game_create(struct sqlite3 *db)
@@ -233,28 +237,28 @@ int game_save(gamedata *gd)
     return 0;
 }
 
-static int cb_load_region(region *tmp, void *udata) {
+static int cb_load_region(region *cursor, void *udata) {
     gamedata *gd = (gamedata *)udata;
-    region *obj = create_region(NULL);
+    region *obj = create_region();
     if (obj) {
-        memcpy(obj, tmp, sizeof(region));
-        tmp->name = NULL;
-        tmp->data = NULL;
-        region_add(gd, obj);
+        memcpy(obj, cursor, sizeof(region));
+        cursor->name = NULL;
+        cursor->data = NULL;
+        gd_add_region(gd, obj);
         return 0;
     }
     return ENOMEM;
 }
 
-static int cb_load_faction(faction *tmp, void *udata) {
+static int cb_load_faction(faction *cursor, void *udata) {
     gamedata *gd = (gamedata *)udata;
-    faction *obj = create_faction(NULL);
+    faction *obj = create_faction();
     if (obj) {
-        memcpy(obj, tmp, sizeof(faction));
-        tmp->name = NULL;
-        tmp->email = NULL;
-        tmp->data = NULL;
-        faction_add(gd, obj);
+        memcpy(obj, cursor, sizeof(faction));
+        gd_add_faction(gd, obj);
+        cursor->name = NULL;
+        cursor->email = NULL;
+        cursor->data = NULL;
         return 0;
     }
     return ENOMEM;

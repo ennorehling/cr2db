@@ -8,7 +8,6 @@ typedef struct building {
     int type;
     char * name;
     struct cJSON *data;
-    struct building *next;
 } building;
 
 void free_building(building *b);

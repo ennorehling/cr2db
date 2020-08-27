@@ -12,11 +12,10 @@ typedef struct unit {
     struct region *region;
     struct ship *ship;
     struct building *building;
-    char * name; /* stretchy_buffer */
-    char * orders;
+    char * name;
+    char * orders; /* stretchy_buffer */
     int race;
     struct cJSON *data;
-    struct unit *next;
 } unit;
 
 void free_unit(unit *u);

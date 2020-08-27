@@ -30,13 +30,13 @@ void game_free(struct gamedata *gd);
 int game_get_turn(struct gamedata *gd);
 void game_set_turn(gamedata *gd, int turn);
 
-struct faction *faction_create(struct gamedata *gd, struct cJSON *data);
-void faction_update(struct gamedata *gd, struct faction *f, struct cJSON *data);
-void faction_add(struct gamedata *gd, struct faction *f);
+struct faction *gd_create_faction(struct gamedata *gd, struct cJSON *data);
+void gd_update_faction(struct gamedata *gd, struct faction *f, struct cJSON *data);
+void gd_add_faction(struct gamedata *gd, struct faction *f);
 
-struct region *region_create(struct gamedata *gd, struct cJSON *data);
-void region_update(struct gamedata *gd, struct region *r, struct cJSON *data);
-void region_add(struct gamedata *gd, struct region *r);
+struct region *gd_create_region(struct gamedata *gd, struct cJSON *data);
+void gd_update_region(struct gamedata *gd, struct region *r, struct cJSON *data);
+void gd_add_region(struct gamedata *gd, struct region *r);
 void region_reset(struct gamedata *gd, struct region *r);
 
 struct unit *unit_create(struct gamedata *gd, struct region *r, struct cJSON *data);

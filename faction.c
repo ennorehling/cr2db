@@ -9,7 +9,7 @@
 
 #include <string.h>
 
-void free_faction(faction *f)
+void faction_free(faction *f)
 {
     int i, count = stb_sb_count(f->messages);
     for (i = 0; i != count; ++i) {
@@ -21,11 +21,9 @@ void free_faction(faction *f)
     free(f->email);
 }
 
-faction *create_faction(cJSON *data)
+faction *create_faction(void)
 {
     faction * f = calloc(1, sizeof(faction));
-    f->data = data;
-    f->messages = NULL;
     return f;
 }
 
@@ -33,7 +31,7 @@ void factions_free(factions *all)
 {
     int i, len = stbds_arrlen(all->arr);
     for (i = 0; i != len; ++i) {
-        free_faction(all->arr[i]);
+        faction_free(all->arr[i]);
         free(all->arr[i]);
     }
     stbds_arrfree(all->arr);

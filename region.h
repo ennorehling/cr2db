@@ -41,15 +41,15 @@ typedef struct region {
     struct region_xyz loc;
     terrain_id terrain;
     char * name;
-    struct building *buildings;
-    struct ship *ships;
-    struct unit *units;
+    struct building **buildings; /* stretchy_buffer */
+    struct ship **ships; /* stretchy_buffer */
+    struct unit **units; /* stretchy_buffer */
     struct message *messages; /* stretchy_buffer */
     struct cJSON *data;
 } region;
 
-region *create_region(struct cJSON *data);
-void free_region(region *r);
+region *create_region(void);
+void region_free(region *r);
 
 struct region_index_xyz {
     struct region_xyz key;
