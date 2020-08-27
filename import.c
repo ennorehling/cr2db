@@ -219,7 +219,7 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
     cJSON * block = NULL;
     if (keyc == 1) {
         if (strcmp("PARTEI", name) == 0) {
-            faction *f = create_faction();
+            faction *f = calloc(1, sizeof(faction));
             f->id = keyv[0];
             gd_update(p);
             p->root = block = cJSON_CreateObject();
@@ -255,7 +255,7 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
     }
     else if (keyc > 1) {
         if (strcmp("REGION", name) == 0) {
-            region *r = create_region();
+            region *r = create_region(0, keyv[0], keyv[1], (keyc > 2) ? keyv[2] : 0, NULL, 0);
             r->loc.x = keyv[0];
             r->loc.y = keyv[1];
             r->loc.z = (keyc > 2) ? keyv[2] : 0;

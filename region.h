@@ -48,7 +48,7 @@ typedef struct region {
     struct cJSON *data;
 } region;
 
-region *create_region(void);
+region *create_region(region_id id, int x, int y, int z, char *name, terrain_id terrain);
 void region_free(region *r);
 
 struct region_index_xyz {

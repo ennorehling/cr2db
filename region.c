@@ -47,9 +47,20 @@ const terrain *terrains_get_crname(terrains *all, const char *crname)
     return NULL;
 }
 
-region *create_region(void)
+region *create_region(region_id id, int x, int y, int z, char *name, terrain_id terrain)
 {
-    region *r = calloc(1, sizeof(region));
+    region *r = malloc(sizeof(region));
+    r->id = id;
+    r->loc.x = x;
+    r->loc.y = y;
+    r->loc.z = z;
+    r->terrain = terrain;
+    r->name = name;
+    r->buildings = NULL;
+    r->ships = NULL;
+    r->units = NULL;
+    r->messages = NULL;
+    r->data = NULL;
     return r;
 }
 

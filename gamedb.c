@@ -554,13 +554,13 @@ int db_load_map(struct sqlite3 *db, regions *list)
             return SQLITE_OK;
         }
         else if (err == SQLITE_ROW) {
-            region *r = create_region();
-            r->id = sqlite3_column_int(g_stmt_select_all_regions_meta, 0);
-            r->loc.x = sqlite3_column_int(g_stmt_select_all_regions_meta, 1);
-            r->loc.y = sqlite3_column_int(g_stmt_select_all_regions_meta, 2);
-            r->loc.z = sqlite3_column_int(g_stmt_select_all_regions_meta, 3);
-            r->name = str_strdup((const char *) sqlite3_column_text(g_stmt_select_all_regions_meta, 4));
-            r->terrain = sqlite3_column_int(g_stmt_select_all_regions_meta, 5);
+            region_id id = sqlite3_column_int(g_stmt_select_all_regions_meta, 0);
+            int x = sqlite3_column_int(g_stmt_select_all_regions_meta, 1);
+            int y = sqlite3_column_int(g_stmt_select_all_regions_meta, 2);
+            int z = sqlite3_column_int(g_stmt_select_all_regions_meta, 3);
+            char *name = str_strdup((const char *) sqlite3_column_text(g_stmt_select_all_regions_meta, 4));
+            terrain_id terrain = sqlite3_column_int(g_stmt_select_all_regions_meta, 5);
+            region *r = create_region(id, x, y, z, name, terrain);
             regions_add(list, r);
         }
         else goto db_load_map_fail;
@@ -588,8 +588,10 @@ int db_load_factions(struct sqlite3 *db, factions *list)
             return SQLITE_OK;
         }
         else if (err == SQLITE_ROW) {
-            faction *f = create_faction();
+            faction *f = malloc(sizeof(faction));
             f->id = sqlite3_column_int(g_stmt_select_all_factions_meta, 0);
+            f->data = NULL;
+            f->messages = NULL;
             f->name = str_strdup((const char *) sqlite3_column_text(g_stmt_select_all_factions_meta, 1));
             f->email = str_strdup((const char *) sqlite3_column_text(g_stmt_select_all_factions_meta, 2));
             factions_add(list, f);

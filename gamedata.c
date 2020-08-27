@@ -50,7 +50,7 @@ void gd_add_faction(gamedata *gd, faction *f)
 
 faction *gd_create_faction(gamedata *gd, cJSON *data)
 {
-    faction * f = create_faction();
+    faction * f = calloc(1, sizeof(faction));
     gd_update_faction(gd, f, data);
     gd_add_faction(gd, f);
     return f;
@@ -98,7 +98,7 @@ void gd_add_region(gamedata *gd, region *r)
 }
 
 region *gd_create_region(gamedata *gd, cJSON *data) {
-    region *r = create_region();
+    region *r = calloc(1, sizeof(region));
     gd_update_region(gd, r, data);
     gd_add_region(gd, r);
     return r;
@@ -239,7 +239,7 @@ int game_save(gamedata *gd)
 
 static int cb_load_region(region *cursor, void *udata) {
     gamedata *gd = (gamedata *)udata;
-    region *obj = create_region();
+    region *obj = malloc(sizeof(region));
     if (obj) {
         memcpy(obj, cursor, sizeof(region));
         cursor->name = NULL;
@@ -252,7 +252,7 @@ static int cb_load_region(region *cursor, void *udata) {
 
 static int cb_load_faction(faction *cursor, void *udata) {
     gamedata *gd = (gamedata *)udata;
-    faction *obj = create_faction();
+    faction *obj = malloc(sizeof(faction));
     if (obj) {
         memcpy(obj, cursor, sizeof(faction));
         gd_add_faction(gd, obj);

@@ -12,18 +12,23 @@
 void faction_free(faction *f)
 {
     int i, count = stb_sb_count(f->messages);
+    free(f->name);
+    free(f->email);
     for (i = 0; i != count; ++i) {
         message_free(f->messages + i);
     }
     stb_sb_free(f->messages);
     cJSON_Delete(f->data);
-    free(f->name);
-    free(f->email);
 }
 
-faction *create_faction(void)
+faction *create_faction(faction_id id, char *name, char *email)
 {
-    faction * f = calloc(1, sizeof(faction));
+    faction * f = malloc(sizeof(faction));
+    f->id = id;
+    f->name = name;
+    f->email = email;
+    f->messages = NULL;
+    f->data = NULL;
     return f;
 }
 

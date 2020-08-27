@@ -13,7 +13,7 @@ typedef struct faction {
 } faction;
 
 void faction_free(faction *f);
-faction *create_faction(void);
+faction *create_faction(faction_id id, char *name, char *email);
 
 struct faction_index_uid {
     faction_id key;
