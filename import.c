@@ -50,6 +50,7 @@ typedef struct parser_t {
         cJSON *object;
         const char *name;
     } stack[STACKSIZE];
+    char **block_names;
 } parser_t;
 
 static struct crschema {
@@ -69,27 +70,46 @@ static struct crschema {
 
 static const struct {
     const char *name;
-    enum {
+    enum block_type {
         TYPE_OBJECT,
-        TYPE_ARRAY,
+        TYPE_STRINGS,
         TYPE_SEQUENCE,
         TYPE_MAP,
     } type;
 } block_info[] = {
-    { "ALLIANZ", TYPE_MAP },
     { "GRENZE", TYPE_SEQUENCE },
     { "KAMPFZAUBER", TYPE_SEQUENCE },
-    { "RESOURCE", TYPE_SEQUENCE },
-    { "DURCHREISE", TYPE_ARRAY },
-    { "DURCHSCHIFFUNG", TYPE_ARRAY },
-    { "SPRUECHE", TYPE_ARRAY },
-    { "COMMANDS", TYPE_ARRAY },
-    { "TRANSLATION", TYPE_OBJECT },
-    { "PREISE", TYPE_OBJECT },
-    { "TALENTE", TYPE_OBJECT },
-    { "MESSAGETYPE", TYPE_MAP },
+    { "DURCHREISE", TYPE_STRINGS },
+    { "DURCHSCHIFFUNG", TYPE_STRINGS },
+    { "SPRUECHE", TYPE_STRINGS },
+    { "COMMANDS", TYPE_STRINGS },
     { NULL, TYPE_OBJECT },
 };
+
+static enum block_type block_type(parser_t *p, const char *name, int key, const char **block_name) {
+    int i;
+    const char *result = NULL;
+    for (i = 0; block_info[i].name; ++i) {
+        if (strcmp(name, block_info[i].name) == 0) {
+            *block_name = block_info[i].name;
+            return block_info[i].type;
+        }
+    }
+    for (i = stb_sb_count(p->block_names); i != 0; --i) {
+        const char *str = p->block_names[i - 1];
+        if (strcmp(str, name) == 0) {
+            result = str;
+            break;
+        }
+    }
+    if (result == NULL) {
+        char *str = str_strdup(name);
+        stb_sb_push(p->block_names, str);
+        result = str;
+    }
+    *block_name = result;
+    return (key<0) ? TYPE_OBJECT : TYPE_MAP;
+}
 
 static void gd_update(parser_t *p) {
     if (p->text) {
@@ -149,59 +169,49 @@ static void stack_push(parser_t *p, cJSON *object, const char *name) {
 }
 
 static enum CR_Error block_create(parser_t * p, const char *name, int key, cJSON *parent) {
-    int i;
     cJSON *block = NULL, *arr;
+    const char *block_name = NULL;
+    enum block_type type = block_type(p, name, key, &block_name);
 
-    for (i = 0; block_info[i].name; ++i) {
-        if (strcmp(name, block_info[i].name) == 0) {
-            switch (block_info[i].type) {
-            case TYPE_ARRAY:
-                block = cJSON_CreateArray();
-                break;
+    switch (type) {
+    case TYPE_STRINGS:
+        block = cJSON_CreateArray();
+        cJSON_AddItemToObject(parent, name, block);
+        break;
 
-            case TYPE_MAP:
-                if (parent != NULL) {
-                    arr = cJSON_GetObjectItem(parent, name);
-                    if (arr == NULL) {
-                        arr = cJSON_CreateArray();
-                        cJSON_AddItemToObject(parent, name, arr);
-                    }
-                    block = cJSON_CreateObject();
-                    cJSON_AddNumberToObject(block, "_index", key);
-                    cJSON_AddItemToArray(arr, block);
-                }
-                break;
-
-            case TYPE_SEQUENCE:
-                if (parent != NULL) {
-                    arr = cJSON_GetObjectItem(parent, name);
-                    if (arr == NULL) {
-                        arr = cJSON_CreateArray();
-                        cJSON_AddItemToObject(parent, name, arr);
-                    }
-                    block = cJSON_CreateObject();
-                    cJSON_AddItemToArray(arr, block);
-                }
-                break;
-
-            case TYPE_OBJECT:
-                block = cJSON_CreateObject();
-                if (parent) {
-                    cJSON_AddItemToObject(parent, name, block);
-                }
-                break;
+    case TYPE_MAP:
+        if (parent != NULL) {
+            arr = cJSON_GetObjectItem(parent, name);
+            if (arr == NULL) {
+                arr = cJSON_CreateArray();
+                cJSON_AddItemToObject(parent, name, arr);
             }
-            break;
+            block = cJSON_CreateObject();
+            cJSON_AddNumberToObject(block, "_index", key);
+            cJSON_AddItemToArray(arr, block);
         }
-    }
-    if (block == NULL) {
-        /* default: a non-array sub-block */
+        break;
+
+    case TYPE_SEQUENCE:
+        if (parent != NULL) {
+            arr = cJSON_GetObjectItem(parent, name);
+            if (arr == NULL) {
+                arr = cJSON_CreateArray();
+                cJSON_AddItemToObject(parent, name, arr);
+            }
+            block = cJSON_CreateObject();
+            cJSON_AddItemToArray(arr, block);
+        }
+        break;
+
+    case TYPE_OBJECT:
         block = cJSON_CreateObject();
         if (parent) {
             cJSON_AddItemToObject(parent, name, block);
         }
+        break;
     }
-    stack_push(p, block, name);
+    stack_push(p, block, block_name);
     p->block = block;
     return CR_ERROR_NONE;
 }
@@ -218,14 +228,15 @@ static cJSON *find_parent(parser_t *p, const char *name) {
 static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int keyv[]) {
     cJSON * block = NULL;
     if (keyc == 1) {
-        if (strcmp("PARTEI", name) == 0) {
+        static const char *name_faction = "PARTEI";
+        if (strcmp(name_faction, name) == 0) {
             faction *f = calloc(1, sizeof(faction));
             f->id = keyv[0];
             gd_update(p);
             p->root = block = cJSON_CreateObject();
             p->faction = f;
             p->stack_top = 0;
-            stack_push(p, block, name);
+            stack_push(p, block, name_faction);
         }
         else if (strcmp("MESSAGE", name) == 0) {
             if (p->messages == NULL) {
@@ -250,10 +261,12 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
         }
         else {
             cJSON *parent = find_parent(p, name);
+            p->messages = NULL;
             return block_create(p, name, keyv[0], parent);
         }
     }
     else if (keyc > 1) {
+        static const char *name_region = "REGION";
         if (strcmp("REGION", name) == 0) {
             region *r = create_region(0, keyv[0], keyv[1], (keyc > 2) ? keyv[2] : 0, NULL, 0);
             r->loc.x = keyv[0];
@@ -263,7 +276,7 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
             p->root = block = cJSON_CreateObject();
             p->region = r;
             p->stack_top = 0;
-            stack_push(p, block, name);
+            stack_push(p, block, name_region);
         }
         else if (strcmp("BATTLE", name) == 0) {
             gd_update(p);
@@ -356,6 +369,7 @@ static void handle_string(void *udata, const char *name, const char *value) {
             char * key = str_strdup(name);
             struct attr_value v;
             v.valuestring = str_strdup(value);
+            v.valuexyz = NULL;
             v.valueint = 0;
             stbds_shput(msg->attr, key, v);
         }
@@ -379,6 +393,32 @@ static void handle_string(void *udata, const char *name, const char *value) {
     }
 }
 
+static void handle_xyz(void *udata, const char *name, const char *value) {
+    parser_t *p = (parser_t *)udata;
+
+    if (p->messages) {
+        message *msg = &stb_sb_last(*p->messages);
+
+        if (strcmp("rendered", name) == 0) {
+            msg->text = str_strdup(value);
+        }
+        else if (strcmp("type", name) == 0) {
+            msg->type = atoi(value);
+        }
+        else {
+            char * key = str_strdup(name);
+            struct attr_value v;
+            v.valuestring = NULL;
+            v.valuexyz = str_strdup(value);
+            v.valueint = 0;
+            stbds_shput(msg->attr, key, v);
+        }
+    }
+    else if (p->block && p->block->type == cJSON_Object) {
+        cJSON_AddStringToObject(p->block, name, value);
+    }
+}
+
 static void handle_number(void *udata, const char *name, long value) {
     parser_t *p = (parser_t *)udata;
 
@@ -392,6 +432,7 @@ static void handle_number(void *udata, const char *name, long value) {
             char * key = str_strdup(name);
             struct attr_value v;
             v.valuestring = NULL;
+            v.valuexyz = NULL;
             v.valueint = value;
             stbds_shput(msg->attr, key, v);
         }
@@ -434,11 +475,13 @@ int import(gamedata *gd, FILE *in, const char *filename)
     char buf[2048], *input;
     parser_t state;
     size_t len;
+    int i;
 
     cp = CR_ParserCreate();
     CR_SetElementHandler(cp, handle_element);
     CR_SetPropertyHandler(cp, handle_string);
     CR_SetNumberHandler(cp, handle_number);
+    CR_SetLocationHandler(cp, handle_xyz);
     CR_SetTextHandler(cp, handle_text);
 
     memset(&state, 0, sizeof(state));
@@ -446,6 +489,7 @@ int import(gamedata *gd, FILE *in, const char *filename)
     state.gd = gd;
     state.parser = cp;
     state.root = NULL;
+    state.block_names = NULL;
     CR_SetUserData(cp, (void *)&state);
 
     input = buf;
@@ -483,6 +527,10 @@ int import(gamedata *gd, FILE *in, const char *filename)
         --state.stack_top;
         cJSON_Delete(state.stack[state.stack_top].object);
     }
+    for (i = stb_sb_count(state.block_names); i != 0; --i) {
+        free(state.block_names[i - 1]);
+    }
+    stb_sb_free(state.block_names);
     if (state.turn > game_get_turn(gd)) {
         game_set_turn(gd, state.turn);
     }

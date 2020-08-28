@@ -13,6 +13,47 @@
 
 #include <assert.h>
 
+static void json_to_cr(cJSON *json, FILE *F);
+
+static void cr_strings(cJSON *json, FILE *F)
+{
+    cJSON *child;
+    fprintf(F, "%s\n", json->string);
+    for (child = json->child; child; child = child->next) {
+        fprintf(F, "\"%s\"\n", child->valuestring);
+    }
+}
+
+static void cr_object(cJSON *json, FILE *F)
+{
+    cJSON *child, *start = NULL;
+    int index = 0;
+
+    for (child = json->child; child; child = child->next) {
+        /* first, print all simple attributes */
+        if (child->string) {
+            json_to_cr(child, F);
+        }
+        else if (!start) {
+            /* very small optimization */
+            start = child;
+        }
+    }
+    for (child = start; child; child = child->next) {
+        /* next, all structured child objects */
+        if (child->type == cJSON_Object) {
+            cJSON *jId = cJSON_GetObjectItem(child, "_index");
+            if (jId) {
+                fprintf(F, "%s %d\n", json->string, jId->valueint);
+            }
+            else {
+                fprintf(F, "%s %d\n", json->string, ++index);
+            }
+            cr_object(child, F);
+        }
+    }
+}
+
 static void json_to_cr(cJSON *json, FILE *F)
 {
     if (json->string && json->string[0] == '_') {
@@ -20,23 +61,15 @@ static void json_to_cr(cJSON *json, FILE *F)
         return;
     }
     else if (json->type == cJSON_Array) {
-        cJSON *child = json->child;
-        int index = 0;
-        while (child) {
-            if (child->type == cJSON_Object) {
-                cJSON *jId = cJSON_GetObjectItem(child, "_index");
-                if (jId) {
-                    fprintf(F, "%s %d\n", json->string, jId->valueint);
-                }
-                else {
-                    fprintf(F, "%s %d\n", json->string, ++index);
-                }
-                json_to_cr(child, F);
-            }
-            else if (child->type == cJSON_String) {
-                fprintf(F, "\"%s\";%s\n", child->valuestring, child->string);
-            }
-            child = child->next;
+        cJSON *first = json->child;
+
+        assert(first);
+        if (first->type == cJSON_String && first->string == NULL) {
+            /* z.B. BEFEHLE oder DURCHREISE */
+            cr_strings(json, F);
+        }
+        else {
+            cr_object(json, F);
         }
     }
     else if (json->type == cJSON_Object) {
@@ -66,13 +99,10 @@ static void cr_messages(FILE * F, struct message *messages) {
         for (a = 0; a != nattr; ++a) {
             struct message_attr *attr = msg->attr + a;
             if (attr->value.valuestring) {
-                if (0 == strcmp("region", attr->key)) {
-                    /* the stupid way to reference a region */
-                    fprintf(F, "%s;%s\n", attr->value.valuestring, attr->key);
-                }
-                else {
-                    fprintf(F, "\"%s\";%s\n", attr->value.valuestring, attr->key);
-                }
+                fprintf(F, "\"%s\";%s\n", attr->value.valuestring, attr->key);
+            }
+            else if (attr->value.valuexyz) {
+                fprintf(F, "%s;%s\n", attr->value.valuexyz, attr->key);
             }
             else {
                 fprintf(F, "%d;%s\n", attr->value.valueint, attr->key);

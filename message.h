@@ -4,6 +4,7 @@ typedef struct message_attr {
     char *key;
     struct attr_value {
         char *valuestring;
+        char *valuexyz;
         int valueint;
     } value;
 } message_attr;

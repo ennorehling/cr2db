@@ -35,6 +35,7 @@ MESSAGE 642352448
 "Spintax The Green (spin) verdient in Eternia (0,0) 50 Silber durch Zauberei.";rendered
 1339439;unit
 0 0 0;region
+-5 -8 42;target
 50;amount
 50;wanted
 6;mode
