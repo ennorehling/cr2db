@@ -28,3 +28,4 @@ Thumbs.db
 *.cmd
 /.vs
 /CMakeSettings.json
+.DS_Store

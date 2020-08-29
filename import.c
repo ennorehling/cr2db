@@ -314,37 +314,6 @@ static enum CR_Error handle_object(parser_t *p, const char *name, unsigned int k
         }
         return handle_block(p, name, keyc, keyv);
     }
-#if 0
-        if (keyc == 0) {
-            cJSON_AddItemToObject(parent, name, p->block);
-        }
-        else if (!is_sequence(name)) {
-            /* objects with an id, like MESSAGE (but not GRENZE) */
-            cJSON_AddNumberToObject(p->block, "id", keyv[0]);
-        }
-        else if (depth > p->top + 1) {
-            fprintf(stderr, gettext("invalid object hierarchy: %s\n"), block_name(name, keyc, keyv));
-            return CR_ERROR_GRAMMAR;
-        }
-
-        /* create json child object and add it to stack */
-        if (keyc > 0) {
-            if (p->top + 1 < STACKSIZE) {
-                if (depth < 0) {
-                    ++p->top;
-                }
-                else {
-                    p->top = depth;
-                }
-            }
-            else {
-                fprintf(stderr, gettext("object crschema too deep at %s\n"), block_name(name, keyc, keyv));
-                return CR_ERROR_GRAMMAR;
-            }
-        }
-        p->parents[p->top] = p->block;
-    }
-#endif
     return CR_ERROR_NONE;
 }
 
