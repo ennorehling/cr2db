@@ -22,6 +22,7 @@ typedef struct gamedata {
 
 int factions_walk(struct gamedata *gd, int (*callback)(struct faction *, void *), void *arg);
 int regions_walk(struct gamedata *gd, int (*callback)(struct region *, void *), void *arg);
+int buildings_walk(struct gamedata *gd, int (*callback)(struct building *, void *), void *arg);
 
 struct gamedata *game_create(struct sqlite3 *db);
 int game_load(struct gamedata *gd);
@@ -39,6 +40,6 @@ void gd_update_region(struct gamedata *gd, struct region *r, struct cJSON *data)
 void gd_add_region(struct gamedata *gd, struct region *r);
 void region_reset(struct gamedata *gd, struct region *r);
 
-struct unit *unit_create(struct gamedata *gd, struct region *r, struct cJSON *data);
-struct ship *ship_create(struct gamedata *gd, struct region *r, struct cJSON *data);
-struct building *building_create(struct gamedata *gd, struct region *r, struct cJSON *data);
+struct building *gd_create_building(struct gamedata *gd, struct region *r, struct cJSON *data);
+void gd_update_building(struct gamedata *gd, struct building *b, struct cJSON *data);
+void gd_add_building(struct gamedata *gd, struct building *b);

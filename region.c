@@ -2,7 +2,6 @@
 #include "message.h"
 
 #include "stb_ds.h"
-#include "stretchy_buffer.h"
 
 #include <strings.h>
 #include <cJSON.h>
@@ -66,19 +65,19 @@ region *create_region(region_id id, int x, int y, int z, char *name, terrain_id 
 
 void region_free(region *r)
 {
-    int i, count = stb_sb_count(r->messages);
-    for (i = 0; i != count; ++i) {
+    unsigned int i, len;
+    for (i = 0, len = stbds_arrlen(r->messages); i != len; ++i) {
         message_free(r->messages + i);
     }
-    stb_sb_free(r->messages);
+    stbds_arrfree(r->messages);
     cJSON_Delete(r->data);
     free(r->name);
 }
 
 void regions_free(regions *all)
 {
-    int i, len = stbds_arrlen(all->arr);
-    for (i = 0; i != len; ++i) {
+    unsigned int i, len;
+    for (i = 0, len = stbds_arrlen(all->arr); i != len; ++i) {
         region_free(all->arr[i]);
         free(all->arr[i]);
     }

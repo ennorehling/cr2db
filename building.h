@@ -7,11 +7,11 @@ typedef unsigned int building_t;
 
 typedef struct building {
     building_id id;
-    struct region *region;
     building_t type;
+    struct region *region;
     char *name;
     struct cJSON *data;
 } building;
 
-void free_building(building *b);
 building *create_building(building_id id, struct region *r, char *name, building_t type);
+void building_free(building *b);

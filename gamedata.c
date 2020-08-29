@@ -9,7 +9,6 @@
 #include "config.h"
 
 #include "stb_ds.h"
-#include "stretchy_buffer.h"
 
 #include <strings.h>
 #include <cJSON.h>
@@ -39,6 +38,21 @@ int regions_walk(struct gamedata *gd, int (*callback)(struct region *, void *), 
         region * r = gd->regions.arr[i];
         int err = callback(r, arg);
         if (err) return err;
+    }
+    return 0;
+}
+
+int buildings_walk(struct gamedata *gd, int (*callback)(struct building *, void *), void *arg)
+{
+    unsigned int i, len;
+    for (i = 0, len = stbds_arrlen(gd->regions.arr); i != len; ++i) {
+        region * r = gd->regions.arr[i];
+        int n, nb;
+        for (n = 0, nb = stbds_arrlen(r->buildings); n != nb; ++n) {
+            building * b = r->buildings[n];
+            int err = callback(b, arg);
+            if (err) return err;
+        }
     }
     return 0;
 }
@@ -89,6 +103,45 @@ void gd_update_faction(gamedata *gd, faction *f, cJSON *data)
         }
         cJSON_Delete(f->data);
         f->data = data;
+    }
+}
+
+void gd_add_building(gamedata *gd, building *b)
+{
+    assert(b);
+    assert(b->region);
+    stbds_arrpush(b->region->buildings, b);
+    // buildings_add(&gd->buildings, b);
+}
+
+building *gd_create_building(gamedata *gd, region *r, cJSON *data)
+{
+    building * b = calloc(1, sizeof(building));
+    assert(gd);
+    assert(r);
+    b->region = r;
+    gd_update_building(gd, b, data);
+    gd_add_building(gd, b);
+    return b;
+}
+
+void gd_update_building(gamedata *gd, building *b, cJSON *data)
+{
+    assert(gd);
+    assert(b);
+    if (b->data != data) {
+        if (data) {
+            cJSON * child;
+            for (child = data->child; child != NULL; child = child->next) {
+                if (b->id == 0 && child->type == cJSON_Number) {
+                    if (strcmp(child->string, "id") == 0) {
+                        b->id = child->valueint;
+                    }
+                }
+            }
+        }
+        cJSON_Delete(b->data);
+        b->data = data;
     }
 }
 
@@ -147,58 +200,26 @@ void gd_update_region(struct gamedata *gd, struct region *r, struct cJSON *data)
 
 void region_reset(struct gamedata *gd, struct region *r)
 {
-    int i;
+    unsigned int i, len;
     assert(gd);
-    for (i = stb_sb_count(r->buildings) - 1; i; --i) {
-        free_building(r->buildings[i]);
+    for (i = 0, len = stbds_arrlen(r->buildings); i != len; ++i) {
+        building * b = r->buildings[i];
+        building_free(b);
+        free(b);
     }
-    stb_sb_free(r->buildings);
-    for (i = stb_sb_count(r->ships) - 1; i; --i) {
-        free_ship(r->ships[i]);
+    stbds_arrfree(r->buildings);
+    for (i = 0, len = stbds_arrlen(r->ships); i != len; ++i) {
+        ship *s = r->ships[i];
+        ship_free(s);
+        free(s);
     }
-    stb_sb_free(r->ships);
-    for (i = stb_sb_count(r->units) - 1; i; --i) {
-        free_unit(r->units[i]);
+    stbds_arrfree(r->ships);
+    for (i = 0, len = stbds_arrlen(r->units); i; ++i) {
+        unit * u = r->units[i];
+        unit_free(u);
+        free(u);
     }
-    stb_sb_free(r->units);
-}
-
-struct unit *unit_create(struct gamedata *gd, struct region *r, struct cJSON *data)
-{
-    unit * u = create_unit(data);
-    assert(gd);
-    assert(r);
-    if (u) {
-        u->region = r;
-        stb_sb_push(r->units, u);
-    }
-    return u;
-}
-
-struct ship *ship_create(struct gamedata *gd, struct region *r, struct cJSON *data)
-{
-    ship *sh = calloc(1, sizeof(ship));
-    assert(gd);
-    assert(r);
-    if (sh) {
-        sh->data = data;
-        sh->region = r;
-        stb_sb_push(r->ships, sh);
-    }
-    return sh;
-}
-
-struct building *building_create(struct gamedata *gd, struct region *r, struct cJSON *data)
-{
-    building *b = calloc(1, sizeof(building));
-    assert(gd);
-    assert(r);
-    if (b) {
-        b->data = data;
-        b->region = r;
-        stb_sb_push(r->buildings, b);
-    }
-    return b;
+    stbds_arrfree(r->units);
 }
 
 gamedata *game_create(struct sqlite3 *db)
@@ -212,20 +233,19 @@ gamedata *game_create(struct sqlite3 *db)
 
 int game_save(gamedata *gd)
 {
-    int i, err;
-    int nfactions = stbds_arrlen(gd->factions.arr);
-    int nregions = stbds_arrlen(gd->regions.arr);
+    unsigned int i, len;
+    int err;
 
     err = db_execute(gd->db, "BEGIN TRANSACTION");
     if (err) return err;
 
-    for (i = 0; i != nfactions; ++i) {
+    for (i = 0, len = stbds_arrlen(gd->factions.arr); i != len; ++i) {
         faction *f = gd->factions.arr[i];
         err = db_write_faction(gd->db, f);
         if (err) return err;
     }
 
-    for (i = 0; i != nregions; ++i) {
+    for (i = 0, len = stbds_arrlen(gd->regions.arr); i != len; ++i) {
         region *r = gd->regions.arr[i];
         int err = db_write_region(gd->db, r);
         if (err) return err;

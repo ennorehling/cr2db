@@ -8,4 +8,4 @@ typedef struct ship {
     struct cJSON *data;
 } ship;
 
-void free_ship(ship *s);
+void ship_free(ship *s);

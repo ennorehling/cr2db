@@ -3,8 +3,7 @@
 #include <cJSON.h>
 #include <stdlib.h>
 
-void free_ship(ship *s) {
+void ship_free(ship *s) {
     cJSON_Delete(s->data);
     free(s->name);
-    free(s);
 }

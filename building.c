@@ -3,9 +3,19 @@
 #include <cJSON.h>
 #include <stdlib.h>
 
-void free_building(building *b)
+void building_free(building *b)
 {
     cJSON_Delete(b->data);
     free(b->name);
-    free(b);
+}
+
+building *create_building(building_id id, struct region *r, char *name, building_t type)
+{
+    building *b = malloc(sizeof(building));
+    b->id = id;
+    b->type = type;
+    b->name = name;
+    b->region = r;
+    b->data = NULL;
+    return b;
 }

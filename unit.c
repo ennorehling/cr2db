@@ -1,24 +1,28 @@
 #include "unit.h"
 
-#include "stretchy_buffer.h"
+#include "stb_ds.h"
 
 #include <cJSON.h>
 
 #include <stdlib.h>
 
-void free_unit(unit *u) {
-    stb_sb_free(u->orders);
+void unit_free(unit *u) {
+    stbds_arrfree(u->orders);
     free(u->name);
 }
 
-void update_unit(unit *u, cJSON *data) {
+unit *create_unit(unit_id id, char *name, race_t race, struct cJSON *data)
+{
+    unit * u = malloc(sizeof(unit));
+    u->id = id;
+    u->name = name;
+    u->race = race;
     u->data = data;
-}
 
-unit *create_unit(struct cJSON *data) {
-    unit * u = calloc(1, sizeof(unit));
-    if (u) {
-        update_unit(u, data);
-    }
+    u->faction = NULL;
+    u->region = NULL;
+    u->ship = NULL;
+    u->building = NULL;
+    u->orders = NULL;
     return u;
 }

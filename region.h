@@ -41,10 +41,10 @@ typedef struct region {
     struct region_xyz loc;
     terrain_id terrain;
     char * name;
-    struct building **buildings; /* stretchy_buffer */
-    struct ship **ships; /* stretchy_buffer */
-    struct unit **units; /* stretchy_buffer */
-    struct message *messages; /* stretchy_buffer */
+    struct building **buildings; /* stb_arr */
+    struct ship **ships; /* stb_arr */
+    struct unit **units; /* stb_arr */
+    struct message *messages; /* stb_arr */
     struct cJSON *data;
 } region;
 

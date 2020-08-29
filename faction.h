@@ -8,7 +8,7 @@ typedef struct faction {
     faction_id id;
     char * name;
     char * email;
-    struct message *messages; /* stretchy_buffer */
+    struct message *messages; /* stbds_arr */
     struct cJSON *data;
 } faction;
 

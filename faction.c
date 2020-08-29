@@ -2,7 +2,6 @@
 #include "message.h"
 
 #include "stb_ds.h"
-#include "stretchy_buffer.h"
 
 #include <strings.h>
 #include <cJSON.h>
@@ -11,13 +10,13 @@
 
 void faction_free(faction *f)
 {
-    int i, count = stb_sb_count(f->messages);
+    unsigned int i, len;
     free(f->name);
     free(f->email);
-    for (i = 0; i != count; ++i) {
+    for (i = 0, len = stbds_arrlen(f->messages); i != len; ++i) {
         message_free(f->messages + i);
     }
-    stb_sb_free(f->messages);
+    stbds_arrfree(f->messages);
     cJSON_Delete(f->data);
 }
 

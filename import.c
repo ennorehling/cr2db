@@ -17,7 +17,6 @@
 #include "gettext.h"
 #include "log.h"
 
-#include "stretchy_buffer.h"
 #include "stb_ds.h"
 
 #include <crpat.h>
@@ -43,14 +42,14 @@ typedef struct parser_t {
     struct unit *unit;
     struct ship *ship;
     struct building *building;
-    char **text;
+    char **text; /* stbds_arr */
     struct message **messages;
     int stack_top;
     struct {
         cJSON *object;
         const char *name;
     } stack[STACKSIZE];
-    char **block_names;
+    char **block_names; /* stbds_arr */
 } parser_t;
 
 static struct crschema {
@@ -87,7 +86,7 @@ static const struct {
 };
 
 static enum block_type block_type(parser_t *p, const char *name, int key, const char **block_name) {
-    int i;
+    unsigned int i, len;
     const char *result = NULL;
     for (i = 0; block_info[i].name; ++i) {
         if (strcmp(name, block_info[i].name) == 0) {
@@ -95,8 +94,8 @@ static enum block_type block_type(parser_t *p, const char *name, int key, const 
             return block_info[i].type;
         }
     }
-    for (i = stb_sb_count(p->block_names); i != 0; --i) {
-        const char *str = p->block_names[i - 1];
+    for (i = 0, len = stbds_arrlen(p->block_names); i != len; ++i) {
+        const char *str = p->block_names[i];
         if (strcmp(str, name) == 0) {
             result = str;
             break;
@@ -104,7 +103,7 @@ static enum block_type block_type(parser_t *p, const char *name, int key, const 
     }
     if (result == NULL) {
         char *str = str_strdup(name);
-        stb_sb_push(p->block_names, str);
+        stbds_arrpush(p->block_names, str);
         result = str;
     }
     *block_name = result;
@@ -121,6 +120,13 @@ static void gd_update(parser_t *p) {
             gd_add_faction(p->gd, p->faction);
             p->root = NULL;
             p->faction = NULL;
+            p->messages = NULL;
+        }
+        else if (p->building) {
+            gd_update_building(p->gd, p->building, p->root);
+            gd_add_building(p->gd, p->building);
+            p->root = NULL;
+            p->building = NULL;
             p->messages = NULL;
         }
         else if (p->region) {
@@ -229,14 +235,25 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
     cJSON * block = NULL;
     if (keyc == 1) {
         static const char *name_faction = "PARTEI";
+        static const char *name_building = "BURG";
         if (strcmp(name_faction, name) == 0) {
             faction *f = calloc(1, sizeof(faction));
             f->id = keyv[0];
             gd_update(p);
-            p->root = block = cJSON_CreateObject();
             p->faction = f;
+            p->root = block = cJSON_CreateObject();
             p->stack_top = 0;
             stack_push(p, block, name_faction);
+        }
+        else if (strcmp(name_building, name) == 0) {
+            building *b = calloc(1, sizeof(building));
+            b->id = keyv[0];
+            b->region = p->region;
+            gd_update(p);
+            p->building = b;
+            p->root = block = cJSON_CreateObject();
+            p->stack_top = 0;
+            stack_push(p, block, name_building);
         }
         else if (strcmp("MESSAGE", name) == 0) {
             if (p->messages == NULL) {
@@ -252,11 +269,11 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
                 }
             }
             if (p->messages) {
-                struct message *msg = stb_sb_add(*p->messages, 1);
+                struct message *msg = stbds_arraddnptr(*p->messages, 1);
                 msg->id = keyv[0];
                 msg->text = NULL;
                 msg->type = 0;
-                msg->attr = NULL;
+                msg->args = NULL;
             }
         }
         else {
@@ -273,8 +290,8 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
             r->loc.y = keyv[1];
             r->loc.z = (keyc > 2) ? keyv[2] : 0;
             gd_update(p);
-            p->root = block = cJSON_CreateObject();
             p->region = r;
+            p->root = block = cJSON_CreateObject();
             p->stack_top = 0;
             stack_push(p, block, name_region);
         }
@@ -326,7 +343,7 @@ static void handle_string(void *udata, const char *name, const char *value) {
     parser_t *p = (parser_t *)udata;
 
     if (p->messages) {
-        message *msg = &stb_sb_last(*p->messages);
+        message *msg = &stbds_arrlast(*p->messages);
 
         if (strcmp("rendered", name) == 0) {
             msg->text = str_strdup(value);
@@ -335,12 +352,8 @@ static void handle_string(void *udata, const char *name, const char *value) {
             msg->type = atoi(value);
         }
         else {
-            char * key = str_strdup(name);
-            struct attr_value v;
-            v.valuestring = str_strdup(value);
-            v.valuexyz = NULL;
-            v.valueint = 0;
-            stbds_shput(msg->attr, key, v);
+            struct message_attr *a = stbds_arraddnptr(msg->args, 1);
+            create_attribute(a, name, ATTR_TEXT, value, 0);
         }
     }
     else if (p->text) {
@@ -350,9 +363,9 @@ static void handle_string(void *udata, const char *name, const char *value) {
             char *tail;
             if (text  != NULL) {
                 /* replace nul-terminator with newline */
-                stb_sb_last(text) = '\n';
+                stbds_arrlast(text) = '\n';
             }
-            tail = stb_sb_add(text, (int) len + 1);
+            tail = stbds_arraddnptr(text, (int) len + 1);
             memcpy(tail, value, len + 1);
             *p->text = text;
         }
@@ -362,11 +375,11 @@ static void handle_string(void *udata, const char *name, const char *value) {
     }
 }
 
-static void handle_xyz(void *udata, const char *name, const char *value) {
+static void handle_multi(void *udata, const char *name, const char *value) {
     parser_t *p = (parser_t *)udata;
 
     if (p->messages) {
-        message *msg = &stb_sb_last(*p->messages);
+        message *msg = &stbds_arrlast(*p->messages);
 
         if (strcmp("rendered", name) == 0) {
             msg->text = str_strdup(value);
@@ -375,12 +388,8 @@ static void handle_xyz(void *udata, const char *name, const char *value) {
             msg->type = atoi(value);
         }
         else {
-            char * key = str_strdup(name);
-            struct attr_value v;
-            v.valuestring = NULL;
-            v.valuexyz = str_strdup(value);
-            v.valueint = 0;
-            stbds_shput(msg->attr, key, v);
+            struct message_attr *a = stbds_arraddnptr(msg->args, 1);
+            create_attribute(a, name, ATTR_MULTI, value, 0);
         }
     }
     else if (p->block && p->block->type == cJSON_Object) {
@@ -392,18 +401,14 @@ static void handle_number(void *udata, const char *name, long value) {
     parser_t *p = (parser_t *)udata;
 
     if (p->messages) {
-        message *msg = &stb_sb_last(*p->messages);
+        message *msg = &stbds_arrlast(*p->messages);
 
         if (strcmp("type", name) == 0) {
             msg->type = (int) value;
         }
         else {
-            char * key = str_strdup(name);
-            struct attr_value v;
-            v.valuestring = NULL;
-            v.valuexyz = NULL;
-            v.valueint = value;
-            stbds_shput(msg->attr, key, v);
+            struct message_attr *a = stbds_arraddnptr(msg->args, 1);
+            create_attribute(a, name, ATTR_NUMBER, NULL, value);
         }
     }
     else {
@@ -443,14 +448,14 @@ int import(gamedata *gd, FILE *in, const char *filename)
     int done = 0;
     char buf[2048], *input;
     parser_t state;
-    size_t len;
-    int i;
+    size_t bytes;
+    unsigned int i, len;
 
     cp = CR_ParserCreate();
     CR_SetElementHandler(cp, handle_element);
     CR_SetPropertyHandler(cp, handle_string);
     CR_SetNumberHandler(cp, handle_number);
-    CR_SetLocationHandler(cp, handle_xyz);
+    CR_SetLocationHandler(cp, handle_multi);
     CR_SetTextHandler(cp, handle_text);
 
     memset(&state, 0, sizeof(state));
@@ -462,11 +467,11 @@ int import(gamedata *gd, FILE *in, const char *filename)
     CR_SetUserData(cp, (void *)&state);
 
     input = buf;
-    len = fread(buf, 1, sizeof(buf), in);
-    if (len >= 3 && buf[0] != 'V') {
+    bytes = fread(buf, 1, sizeof(buf), in);
+    if (bytes >= 3 && buf[0] != 'V') {
         /* skip BOM */
         input += 3;
-        len -= 3;
+        bytes -= 3;
     }
 
     while (!done) {
@@ -479,14 +484,14 @@ int import(gamedata *gd, FILE *in, const char *filename)
             break;
         }
         done = feof(in);
-        if (CR_Parse(cp, input, len, done) == CR_STATUS_ERROR) {
+        if (CR_Parse(cp, input, bytes, done) == CR_STATUS_ERROR) {
             log_error(NULL, gettext("parse error at line %d of %s: %s\n"),
                 CR_GetCurrentLineNumber(cp), filename,
                 CR_ErrorString(CR_GetErrorCode(cp)));
             free_state(&state);
             break;
         }
-        len = fread(buf, 1, sizeof(buf), in);
+        bytes = fread(buf, 1, sizeof(buf), in);
         input = buf;
     }
     CR_ParserFree(cp);
@@ -496,10 +501,10 @@ int import(gamedata *gd, FILE *in, const char *filename)
         --state.stack_top;
         cJSON_Delete(state.stack[state.stack_top].object);
     }
-    for (i = stb_sb_count(state.block_names); i != 0; --i) {
-        free(state.block_names[i - 1]);
+    for (i = 0, len = stbds_arrlen(state.block_names); i != len; ++i) {
+        free(state.block_names[i]);
     }
-    stb_sb_free(state.block_names);
+    stbds_arrfree(state.block_names);
     if (state.turn > game_get_turn(gd)) {
         game_set_turn(gd, state.turn);
     }

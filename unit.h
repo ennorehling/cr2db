@@ -6,17 +6,20 @@ struct region;
 struct ship;
 struct building;
 
+typedef unsigned int race_t;
+typedef unsigned int unit_id;
+
 typedef struct unit {
-    unsigned int id;
+    unit_id id;
     struct faction *faction;
     struct region *region;
     struct ship *ship;
     struct building *building;
     char * name;
-    char * orders; /* stretchy_buffer */
-    int race;
+    char * orders; /* stbds_arr */
+    race_t race;
     struct cJSON *data;
 } unit;
 
-void free_unit(unit *u);
-unit *create_unit(struct cJSON *data);
+void unit_free(unit *u);
+unit *create_unit(unit_id id, char *name, race_t race, struct cJSON *data);
