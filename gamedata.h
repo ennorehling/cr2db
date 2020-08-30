@@ -11,6 +11,12 @@ struct sqlite3;
 struct unit;
 struct building;
 struct ship;
+struct message;
+
+typedef struct battle {
+    region_xyz loc;
+    struct message *messages; /* stb_arr */
+} battle;
 
 typedef struct gamedata {
     struct sqlite3 *db;

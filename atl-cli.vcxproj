@@ -77,6 +77,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>C:\Users\Enno\Documents\Eressea\crservice\crpat;C:\Users\Enno\Documents\Eressea\crservice\clibs;C:\Users\Enno\Documents\Eressea\crservice\cJSON;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -102,6 +103,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>C:\Users\Enno\Documents\Eressea\crservice\crpat;C:\Users\Enno\Documents\Eressea\crservice\clibs;C:\Users\Enno\Documents\Eressea\crservice\cJSON;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

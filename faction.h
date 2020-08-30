@@ -9,6 +9,7 @@ typedef struct faction {
     char * name;
     char * email;
     struct message *messages; /* stbds_arr */
+    struct battle *battles; /* stb_arr */
     struct cJSON *data;
 } faction;
 

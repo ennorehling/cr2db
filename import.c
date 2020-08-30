@@ -39,6 +39,7 @@ typedef struct parser_t {
     int turn;
     struct faction *faction;
     struct region *region;
+    struct battle *battle;
     struct unit *unit;
     struct ship *ship;
     struct building *building;
@@ -132,6 +133,7 @@ static void gd_update(parser_t *p) {
             gd_add_region(p->gd, p->region);
             p->root = NULL;
         }
+        p->battle = NULL;
     }
     /* preserve current region and faction, but these objects have no sub-objects: */
     p->messages = NULL;
@@ -254,22 +256,18 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
             b->region = p->region;
             p->building = b;
             p->root = block = cJSON_CreateObject();
-            /* pop everything except for the REGION off the stack: */
-            p->stack_top = 1;
+            p->stack_top = 1; /* only REGOIN is below this on the stack */
             stack_push(p, block, name_building);
         }
         else if (strcmp("MESSAGE", name) == 0) {
-            if (p->messages == NULL) {
-                if (p->faction) {
-                    p->messages = &p->faction->messages;
-                }
-                else if (p->region) {
-                    p->messages = &p->region->messages;
-                }
-                else {
-                    /* TODO: BATTLE */
-                    p->messages = NULL;
-                }
+            if (p->battle) {
+                p->messages = &p->battle->messages;
+            }
+            else if (p->faction) {
+                p->messages = &p->faction->messages;
+            }
+            else if (p->region) {
+                p->messages = &p->region->messages;
             }
             if (p->messages) {
                 struct message *msg = stbds_arraddnptr(*p->messages, 1);
@@ -277,6 +275,9 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
                 msg->text = NULL;
                 msg->type = 0;
                 msg->args = NULL;
+            }
+            else {
+                return CR_ERROR_GRAMMAR;
             }
         }
         else {
@@ -287,27 +288,30 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
     }
     else if (keyc > 1) {
         static const char *name_region = "REGION";
-        if (strcmp("REGION", name) == 0) {
+        if (strcmp(name_region, name) == 0) {
             region *r = create_region(0, keyv[0], keyv[1], (keyc > 2) ? keyv[2] : 0, NULL, 0);
             r->loc.x = keyv[0];
             r->loc.y = keyv[1];
             r->loc.z = (keyc > 2) ? keyv[2] : 0;
             p->region = r;
-            /* we have certainly reached the end of faction parsing.
-             * future MESSAGE blocks will be part of a REGION
-             */
             p->faction = NULL;
             p->root = block = cJSON_CreateObject();
             p->stack_top = 0;
             stack_push(p, block, name_region);
         }
         else if (strcmp("BATTLE", name) == 0) {
-            /* TODO: this breaks parsing */
-            p->messages = NULL;
+            battle *b = stbds_arraddnptr(p->faction->battles, 1);
+            p->battle = b;
+            b->messages = NULL;
+            b->loc.x = keyv[0];
+            b->loc.y = keyv[1];
+            b->loc.z = (keyc > 2) ? keyv[2] : 0;
+            p->root = NULL;
             p->current = NULL;
+            p->stack_top = 1; /* only FACTION is below BATTLE on the stack */
         }
         else {
-            /* only REGION blocks have more then 1 key */
+            /* only REGION and BATTLE blocks can have more then 1 key */
             return CR_ERROR_GRAMMAR;
         }
     }

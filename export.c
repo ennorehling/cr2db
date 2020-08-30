@@ -131,10 +131,10 @@ static void json_to_cr(cJSON *json, FILE *F)
     }
 }
 
-static void cr_messages(FILE * F, struct message *messages) {
-    int i, len = stbds_arrlen(messages);
+static void cr_messages(FILE * F, message *list) {
+    int i, len = stbds_arrlen(list);
     for (i = 0; i != len; ++i) {
-        message *msg = messages + i;
+        message *msg = list + i;
         unsigned int a, nattr;
         fprintf(F, "MESSAGE %d\n%d;type\n\"%s\";rendered\n", msg->id, msg->type, msg->text);
         for (a = 0, nattr = stbds_arrlen(msg->args); a != nattr; ++a) {
@@ -149,6 +149,20 @@ static void cr_messages(FILE * F, struct message *messages) {
                 fprintf(F, "%d;%s\n", attr->value.number, attr->key);
             }
         }
+    }
+}
+
+static void cr_battles(FILE *F, battle *list) {
+    int i, len = stbds_arrlen(list);
+    for (i = 0; i != len; ++i) {
+        battle *b = list + i;
+        if (b->loc.z != 0) {
+            fprintf(F, "BATTLE %d %d %d\n", b->loc.x, b->loc.y, b->loc.z);
+        }
+        else {
+            fprintf(F, "BATTLE %d %d\n", b->loc.x, b->loc.y);
+        }
+        cr_messages(F, b->messages);
     }
 }
 
@@ -185,6 +199,9 @@ static int cb_faction(faction *f, void *arg)
     cr_object(f->data, F, WRITE_ALL, "PARTEI", f->id);
     if (f->messages) {
         cr_messages(F, f->messages);
+    }
+    if (f->battles) {
+        cr_battles(F, f->battles);
     }
     return 0;
 }

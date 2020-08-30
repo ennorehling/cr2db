@@ -1,12 +1,11 @@
 #pragma once
 
-struct cJSON;
+typedef unsigned int terrain_id;
+
 struct building;
 struct ship;
 struct unit;
 struct message;
-
-typedef unsigned int terrain_id;
 
 typedef struct terrain {
     terrain_id id;
@@ -32,13 +31,13 @@ const struct terrain * terrains_get_crname(struct terrains *all, const char *crn
 
 typedef unsigned int region_id;
 
-struct region_xyz {
+typedef struct region_xyz {
     int x, y, z;
-};
+} region_xyz;
 
 typedef struct region {
     region_id id;
-    struct region_xyz loc;
+    region_xyz loc;
     terrain_id terrain;
     char * name;
     struct building **buildings; /* stb_arr */

@@ -1,3 +1,3 @@
-rewrite-cr test.cr export.cr
+rewrite-cr mini.cr export.cr
 #import-cr test.cr
 #export-cr export.cr

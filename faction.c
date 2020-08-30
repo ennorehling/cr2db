@@ -1,4 +1,5 @@
 #include "faction.h"
+#include "gamedata.h"
 #include "message.h"
 
 #include "stb_ds.h"
@@ -8,15 +9,26 @@
 
 #include <string.h>
 
+void message_arrfree(message *arr) {
+    unsigned int i, len;
+    for (i = 0, len = stbds_arrlen(arr); i != len; ++i) {
+        message_free(arr + i);
+    }
+    stbds_arrfree(arr);
+}
+
 void faction_free(faction *f)
 {
     unsigned int i, len;
     free(f->name);
     free(f->email);
-    for (i = 0, len = stbds_arrlen(f->messages); i != len; ++i) {
-        message_free(f->messages + i);
+    message_arrfree(f->messages);
+    f->messages = NULL;
+    for (i = 0, len = stbds_arrlen(f->battles); i != len; ++i) {
+        struct battle *b = f->battles + i;
+        message_arrfree(b->messages);
     }
-    stbds_arrfree(f->messages);
+    stbds_arrfree(f->battles);
     cJSON_Delete(f->data);
 }
 
