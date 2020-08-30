@@ -22,7 +22,7 @@
 
 typedef struct parser_t {
     CR_Parser parser;
-    cJSON *root, *block;
+    cJSON *root, *current;
     cJSON *parents[STACKSIZE];
     int top;
 } parser_t;
@@ -90,7 +90,7 @@ static cJSON *block_create(parser_t * p, const char *name) {
     if (block == NULL) {
         block = cJSON_CreateObject();
     }
-    p->block = block;
+    p->current = block;
     return parent;
 }
 
@@ -98,7 +98,7 @@ static enum CR_Error handle_block(parser_t *p, const char * name) {
     cJSON *parent = block_create(p, name);
 
     if (parent) {
-        cJSON_AddItemToObject(parent, name, p->block);
+        cJSON_AddItemToObject(parent, name, p->current);
     }
     else {
         fprintf(stderr, gettext("invalid object hierarchy at %s\n"), block_name(name, 0, NULL));
@@ -154,7 +154,7 @@ static enum CR_Error handle_object(parser_t *p, const char *name, unsigned int k
                 fprintf(stderr, gettext("unknown version %d\n"), version);
             }
             block = cJSON_CreateObject();
-            p->parents[0] = p->root = p->block = block;
+            p->parents[0] = p->root = p->current = block;
             p->top = 0;
         }
         else {
@@ -189,7 +189,7 @@ static enum CR_Error handle_object(parser_t *p, const char *name, unsigned int k
                 p->parents[p->top] = block;
             }
         }
-        p->block = block;
+        p->current = block;
         if (keyc == 1) {
             if (!sequence) {
                 cJSON_AddNumberToObject(block, "id", keyv[0]);
@@ -208,7 +208,7 @@ static enum CR_Error handle_object(parser_t *p, const char *name, unsigned int k
         }
     }
     if (arr) {
-        cJSON_AddItemToArray(arr, p->block);
+        cJSON_AddItemToArray(arr, p->current);
     }
     return CR_ERROR_NONE;
 }
@@ -221,28 +221,33 @@ static enum CR_Error handle_element(void *udata, const char *name, unsigned int 
     return handle_object(p, name, keyc, keyv);
 }
 
-static void handle_string(void *udata, const char *name, const char *value) {
+static enum CR_Error handle_string(void *udata, const char *name, const char *value) {
     parser_t *p = (parser_t *)udata;
 
-    if (p->block && p->block->type == cJSON_Object) {
-        cJSON_AddStringToObject(p->block, name, value);
+    if (p->current && p->current->type == cJSON_Object) {
+        cJSON_AddStringToObject(p->current, name, value);
     }
+    return CR_ERROR_NONE;
 }
 
-static void handle_number(void *udata, const char *name, long value) {
+static enum CR_Error handle_number(void *udata, const char *name, long value) {
     parser_t *p = (parser_t *)udata;
 
-    if (p->block && p->block->type == cJSON_Object) {
-        cJSON_AddNumberToObject(p->block, name, (double)value);
+    if (p->current && p->current->type == cJSON_Object) {
+        cJSON_AddNumberToObject(p->current, name, (double)value);
+        return CR_ERROR_NONE;
     }
+    return CR_ERROR_GRAMMAR;
 }
 
-static void handle_text(void *udata, const char *text) {
+static enum CR_Error handle_text(void *udata, const char *text) {
     parser_t *p = (parser_t *)udata;
 
-    if (p->block && p->block->type == cJSON_Array) {
-        cJSON_AddItemToArray(p->block, cJSON_CreateString(text));
+    if (p->current && p->current->type == cJSON_Array) {
+        cJSON_AddItemToArray(p->current, cJSON_CreateString(text));
+        return CR_ERROR_NONE;
     }
+    return CR_ERROR_GRAMMAR;
 }
 
 cJSON *crfile_read(FILE *in, const char *filename) {

@@ -21,12 +21,6 @@
     <ClCompile Include="config.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="crdata.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="crfile.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="gamedb.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -90,12 +84,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="crdata.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="crfile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="gamedb.h">

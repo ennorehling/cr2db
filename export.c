@@ -26,32 +26,68 @@ static void cr_strings(cJSON *json, FILE *F)
     }
 }
 
-static void cr_object(cJSON *json, FILE *F)
+#define WRITE_ATTR (1 << 0)
+#define WRITE_SIMPLE (1 << 1)
+#define WRITE_INDEXED (1 << 2)
+#define WRITE_ALL (WRITE_ATTR|WRITE_SIMPLE|WRITE_INDEXED)
+
+static void cr_object(cJSON *json, FILE *F, int mode, const char *name, int id)
 {
     cJSON *child, *start = NULL;
-    int index = 0;
 
-    for (child = json->child; child; child = child->next) {
-        /* first, print all simple attributes */
-        if (child->string) {
-            json_to_cr(child, F);
-        }
-        else if (!start) {
-            /* very small optimization */
-            start = child;
-        }
-    }
-    for (child = start; child; child = child->next) {
-        /* next, all structured child objects */
-        if (child->type == cJSON_Object) {
-            cJSON *jId = cJSON_GetObjectItem(child, "_index");
-            if (jId) {
-                fprintf(F, "%s %d\n", json->string, jId->valueint);
+    assert(json->type == cJSON_Object || json->type == cJSON_Array);
+    if (mode & WRITE_ATTR) {
+        assert(json->type == cJSON_Object);
+        if (name) {
+            if (id > 0) {
+                fprintf(F, "%s %d\n", name, id);
             }
             else {
-                fprintf(F, "%s %d\n", json->string, ++index);
+                fprintf(F, "%s\n", name);
             }
-            cr_object(child, F);
+        }
+        for (child = json->child; child; child = child->next) {
+            /* first, print all simple attributes */
+            if (child->type != cJSON_Object && child->type != cJSON_Array) {
+                json_to_cr(child, F);
+            }
+            else if (!start) {
+                /* very small optimization */
+                start = child;
+            }
+        }
+    }
+    if (mode & WRITE_SIMPLE) {
+        for (child = start ? start : json->child, start = NULL; child; child = child->next) {
+            /* next, all non-indexed child objects */
+            if (child->type == cJSON_Object) {
+                cJSON *jId = cJSON_GetObjectItem(child, "_index");
+                if (jId == NULL) {
+                    cr_object(child, F, WRITE_ATTR, child->string, 0);
+                }
+                else if (!start) {
+                    /* very small optimization */
+                    start = child;
+                }
+            }
+            else if (!start && child->type == cJSON_Array) {
+                /* very small optimization */
+                start = child;
+            }
+        }
+    }
+    if (mode & WRITE_INDEXED) {
+        for (child = start ? start : json->child; child; child = child->next) {
+            /* next, all indexed child objects */
+            if (child->type == cJSON_Object) {
+                cJSON *jId = cJSON_GetObjectItem(child, "_index");
+                if (jId) {
+                    cr_object(child, F, WRITE_ALL, json->string, jId->valueint);
+                }
+            }
+            else if (child->type == cJSON_Array) {
+                json_to_cr(child, F);
+            }
         }
     }
 }
@@ -63,26 +99,29 @@ static void json_to_cr(cJSON *json, FILE *F)
         return;
     }
     else if (json->type == cJSON_Array) {
-        cJSON *first = json->child;
+        cJSON *child = json->child;
 
-        assert(first);
-        if (first->type == cJSON_String && first->string == NULL) {
-            /* z.B. BEFEHLE oder DURCHREISE */
-            cr_strings(json, F);
+        assert(child);
+        if (child->type == cJSON_Object) {
+            int index = 0;
+            /* 
+             * array contains indexed objects (TYPE_MAP, e.g. EINHEIT)
+             * or not (TYPE_SEQUENCE, e.g. GRENZE)
+             */
+            for (child = json->child; child; child = child->next) {
+                cJSON *jId = cJSON_GetObjectItem(child, "_index");
+                cr_object(child, F, WRITE_ALL, json->string, jId ? jId->valueint : ++index);
+            }
         }
         else {
-            cr_object(json, F);
+            /* e.g. SPRUECHE, BEFEHLE, DURCHREISE */
+            cr_strings(json, F);
         }
     }
     else if (json->type == cJSON_Object) {
-        cJSON *child = json->child;
-        while (child) {
-            if (child->type == cJSON_Object) {
-                fprintf(F, "%s\n", child->string);
-            }
-            json_to_cr(child, F);
-            child = child->next;
-        }
+        cr_object(json, F, WRITE_ATTR, json->string, 0);
+        cr_object(json, F, WRITE_SIMPLE, json->string, 0);
+        cr_object(json, F, WRITE_INDEXED, json->string, 0);
     }
     else if (json->type == cJSON_Number) {
         fprintf(F, "%d;%s\n", json->valueint, json->string);
@@ -113,24 +152,6 @@ static void cr_messages(FILE * F, struct message *messages) {
     }
 }
 
-static int cr_building(FILE *F, building *obj)
-{
-    fprintf(F, "BURG %u\n", obj->id);
-    if (obj->data) {
-        json_to_cr(obj->data, F);
-    }
-    return 0;
-}
-
-static int cr_ship(FILE *F, ship *obj)
-{
-    fprintf(F, "SCHIFF %u\n", obj->id);
-    if (obj->data) {
-        json_to_cr(obj->data, F);
-    }
-    return 0;
-}
-
 static int cr_orders(FILE *F, const char *orders)
 {
     if (orders && *orders) {
@@ -157,23 +178,11 @@ static int cr_orders(FILE *F, const char *orders)
     return 0;
 }
 
-static int cr_unit(FILE *F, unit *obj)
-{
-    fprintf(F, "EINHEIT %u\n", obj->id);
-    if (obj->data) {
-        json_to_cr(obj->data, F);
-    }
-    cr_orders(F, obj->orders);
-    return 0;
-}
-
 static int cb_faction(faction *f, void *arg)
 {
     FILE * F = (FILE *)arg;
-    fprintf(F, "PARTEI %u\n", f->id);
-    if (f->data) {
-        json_to_cr(f->data, F);
-    }
+
+    cr_object(f->data, F, WRITE_ALL, "PARTEI", f->id);
     if (f->messages) {
         cr_messages(F, f->messages);
     }
@@ -189,29 +198,32 @@ static int cb_region(region *r, void *arg)
     else {
         fprintf(F, "REGION %d %d %d\n", r->loc.x, r->loc.y, r->loc.z);
     }
+    if (r->data) {
+        cr_object(r->data, F, WRITE_ALL, NULL, 0);
+    }
     if (r->messages) {
         cr_messages(F, r->messages);
     }
     if (r->buildings) {
         int i, len = stbds_arrlen(r->buildings);
         for (i = 0; i != len; ++i) {
-            cr_building(F, r->buildings[i]);
+            building *obj = r->buildings[i];
+            cr_object(obj->data, F, WRITE_ALL, "BURG", obj->id);
         }
     }
     if (r->ships) {
         int i, len = stbds_arrlen(r->ships);
         for (i = 0; i != len; ++i) {
-            cr_ship(F, r->ships[i]);
+            ship *obj = r->ships[i];
+            cr_object(obj->data, F, WRITE_ALL, "SCHIFF", obj->id);
         }
     }
     if (r->units) {
         int i, len = stbds_arrlen(r->units);
         for (i = 0; i != len; ++i) {
-            cr_unit(F, r->units[i]);
+            unit *obj = r->units[i];
+            cr_object(obj->data, F, WRITE_ALL, "EINHEIT", obj->id);
         }
-    }
-    if (r->data) {
-        json_to_cr(r->data, F);
     }
     return 0;
 }

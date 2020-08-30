@@ -34,7 +34,7 @@
 
 typedef struct parser_t {
     CR_Parser parser;
-    cJSON *root, *block;
+    cJSON *root, *current;
     gamedata *gd;
     int turn;
     struct faction *faction;
@@ -59,7 +59,7 @@ static struct crschema {
     {"BATTLE", {"MESSAGE", NULL}},
     {"GRUPPE", {"ALLIANZ", NULL}},
     {"EINHEIT", {"COMMANDS", "EFFECTS", "GEGENSTAENDE", "KAMPFZAUBER", "SPRUECHE", "TALENTE", NULL}},
-    {"REGION", {"EINHEIT", "BURG", "SCHIFF", "DURCHREISE", "DURCHSCHIFFUNG", "GRENZE", "PREISE", "RESOURCE", NULL}},
+    {"REGION", {"EINHEIT", "BURG", "SCHIFF", "DURCHREISE", "DURCHSCHIFFUNG", "GRENZE", "PREISE", "RESOURCE", "EFFECTS", NULL}},
     {"BURG", {"EFFECTS", NULL}},
     {"SCHIFF", {"EFFECTS", NULL}},
     {"MESSAGETYPE", {NULL}},
@@ -80,6 +80,7 @@ static const struct {
     { "KAMPFZAUBER", TYPE_SEQUENCE },
     { "DURCHREISE", TYPE_STRINGS },
     { "DURCHSCHIFFUNG", TYPE_STRINGS },
+    { "EFFECTS", TYPE_STRINGS },
     { "SPRUECHE", TYPE_STRINGS },
     { "COMMANDS", TYPE_STRINGS },
     { NULL, TYPE_OBJECT },
@@ -119,24 +120,24 @@ static void gd_update(parser_t *p) {
             gd_update_faction(p->gd, p->faction, p->root);
             gd_add_faction(p->gd, p->faction);
             p->root = NULL;
-            p->faction = NULL;
-            p->messages = NULL;
         }
         else if (p->building) {
+            p->building->region = p->region;
             gd_update_building(p->gd, p->building, p->root);
             gd_add_building(p->gd, p->building);
             p->root = NULL;
-            p->building = NULL;
-            p->messages = NULL;
         }
         else if (p->region) {
             gd_update_region(p->gd, p->region, p->root);
             gd_add_region(p->gd, p->region);
             p->root = NULL;
-            p->region = NULL;
-            p->messages = NULL;
         }
     }
+    /* preserve current region and faction, but these objects have no sub-objects: */
+    p->messages = NULL;
+    p->unit = NULL;
+    p->building = NULL;
+    p->ship = NULL;
 }
 
 static bool is_child(parser_t *p, const char *name) {
@@ -168,7 +169,7 @@ static cJSON *stack_pop(parser_t *p) {
 }
 
 static void stack_push(parser_t *p, cJSON *object, const char *name) {
-    p->block = object;
+    p->current = object;
     p->stack[p->stack_top].name = name;
     p->stack[p->stack_top].object = object;
     p->stack_top++;
@@ -218,7 +219,7 @@ static enum CR_Error block_create(parser_t * p, const char *name, int key, cJSON
         break;
     }
     stack_push(p, block, block_name);
-    p->block = block;
+    p->current = block;
     return CR_ERROR_NONE;
 }
 
@@ -233,15 +234,17 @@ static cJSON *find_parent(parser_t *p, const char *name) {
 
 static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int keyv[]) {
     cJSON * block = NULL;
+
+    gd_update(p);
     if (keyc == 1) {
         static const char *name_faction = "PARTEI";
         static const char *name_building = "BURG";
         if (strcmp(name_faction, name) == 0) {
             faction *f = calloc(1, sizeof(faction));
             f->id = keyv[0];
-            gd_update(p);
             p->faction = f;
             p->root = block = cJSON_CreateObject();
+            /* pop the entire stack, and start over: */
             p->stack_top = 0;
             stack_push(p, block, name_faction);
         }
@@ -249,10 +252,10 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
             building *b = calloc(1, sizeof(building));
             b->id = keyv[0];
             b->region = p->region;
-            gd_update(p);
             p->building = b;
             p->root = block = cJSON_CreateObject();
-            p->stack_top = 0;
+            /* pop everything except for the REGION off the stack: */
+            p->stack_top = 1;
             stack_push(p, block, name_building);
         }
         else if (strcmp("MESSAGE", name) == 0) {
@@ -289,16 +292,19 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
             r->loc.x = keyv[0];
             r->loc.y = keyv[1];
             r->loc.z = (keyc > 2) ? keyv[2] : 0;
-            gd_update(p);
             p->region = r;
+            /* we have certainly reached the end of faction parsing.
+             * future MESSAGE blocks will be part of a REGION
+             */
+            p->faction = NULL;
             p->root = block = cJSON_CreateObject();
             p->stack_top = 0;
             stack_push(p, block, name_region);
         }
         else if (strcmp("BATTLE", name) == 0) {
-            gd_update(p);
+            /* TODO: this breaks parsing */
             p->messages = NULL;
-            p->block = NULL;
+            p->current = NULL;
         }
         else {
             /* only REGION blocks have more then 1 key */
@@ -307,6 +313,9 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
     }
     else { /* keyc == 0 */
         cJSON *parent = find_parent(p, name);
+        if (!parent) {
+            return CR_ERROR_GRAMMAR;
+        }
         return block_create(p, name, -1, parent);
     }
     return CR_ERROR_NONE;
@@ -339,7 +348,7 @@ static enum CR_Error handle_element(void *udata, const char *name, unsigned int 
     return handle_object(p, name, keyc, keyv);
 }
 
-static void handle_string(void *udata, const char *name, const char *value) {
+static enum CR_Error handle_string(void *udata, const char *name, const char *value) {
     parser_t *p = (parser_t *)udata;
 
     if (p->messages) {
@@ -370,12 +379,13 @@ static void handle_string(void *udata, const char *name, const char *value) {
             *p->text = text;
         }
     }
-    else if (p->block && p->block->type == cJSON_Object) {
-        cJSON_AddStringToObject(p->block, name, value);
+    else if (p->current && p->current->type == cJSON_Object) {
+        cJSON_AddStringToObject(p->current, name, value);
     }
+    return CR_ERROR_NONE;
 }
 
-static void handle_multi(void *udata, const char *name, const char *value) {
+static enum CR_Error handle_multi(void *udata, const char *name, const char *value) {
     parser_t *p = (parser_t *)udata;
 
     if (p->messages) {
@@ -392,12 +402,16 @@ static void handle_multi(void *udata, const char *name, const char *value) {
             create_attribute(a, name, ATTR_MULTI, value, 0);
         }
     }
-    else if (p->block && p->block->type == cJSON_Object) {
-        cJSON_AddStringToObject(p->block, name, value);
+    else if (p->current && p->current->type == cJSON_Object) {
+        cJSON_AddStringToObject(p->current, name, value);
     }
+    else {
+        return CR_ERROR_GRAMMAR;
+    }
+    return CR_ERROR_NONE;
 }
 
-static void handle_number(void *udata, const char *name, long value) {
+static enum CR_Error handle_number(void *udata, const char *name, long value) {
     parser_t *p = (parser_t *)udata;
 
     if (p->messages) {
@@ -412,21 +426,24 @@ static void handle_number(void *udata, const char *name, long value) {
         }
     }
     else {
-        if (p->block) {
-            cJSON_AddNumberToObject(p->block, name, (double)value);
+        if (p->current) {
+            cJSON_AddNumberToObject(p->current, name, (double)value);
         }
         else if (strcmp("Runde", name) == 0) {
             p->turn = value;
         }
     }
+    return CR_ERROR_NONE;
 }
 
-static void handle_text(void *udata, const char *text) {
+static enum CR_Error handle_text(void *udata, const char *text) {
     parser_t *p = (parser_t *)udata;
 
-    if (p->block && p->block->type == cJSON_Array) {
-        cJSON_AddItemToArray(p->block, cJSON_CreateString(text));
+    if (p->current && p->current->type == cJSON_Array) {
+        cJSON_AddItemToArray(p->current, cJSON_CreateString(text));
+        return CR_ERROR_NONE;
     }
+    return CR_ERROR_GRAMMAR;
 }
 
 static void free_state(parser_t *p) {
@@ -449,7 +466,7 @@ int import(gamedata *gd, FILE *in, const char *filename)
     char buf[2048], *input;
     parser_t state;
     size_t bytes;
-    unsigned int i, len;
+    unsigned int i, len, err = CR_STATUS_OK;
 
     cp = CR_ParserCreate();
     CR_SetElementHandler(cp, handle_element);
@@ -484,7 +501,7 @@ int import(gamedata *gd, FILE *in, const char *filename)
             break;
         }
         done = feof(in);
-        if (CR_Parse(cp, input, bytes, done) == CR_STATUS_ERROR) {
+        if ((err = CR_Parse(cp, input, bytes, done)) == CR_STATUS_ERROR) {
             log_error(NULL, gettext("parse error at line %d of %s: %s\n"),
                 CR_GetCurrentLineNumber(cp), filename,
                 CR_ErrorString(CR_GetErrorCode(cp)));
@@ -497,9 +514,11 @@ int import(gamedata *gd, FILE *in, const char *filename)
     CR_ParserFree(cp);
 
     gd_update(&state);
-    while (state.stack_top > 0) {
-        --state.stack_top;
-        cJSON_Delete(state.stack[state.stack_top].object);
+
+    /* FIXME: would this not indicate an error? */
+    assert(state.root == NULL);
+    if (state.root) {
+        cJSON_Delete(state.root);
     }
     for (i = 0, len = stbds_arrlen(state.block_names); i != len; ++i) {
         free(state.block_names[i]);
@@ -508,5 +527,5 @@ int import(gamedata *gd, FILE *in, const char *filename)
     if (state.turn > game_get_turn(gd)) {
         game_set_turn(gd, state.turn);
     }
-    return game_save(gd);
+    return err;
 }

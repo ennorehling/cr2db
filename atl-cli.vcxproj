@@ -114,8 +114,6 @@
     <ClCompile Include="clibs\strings.c" />
     <ClCompile Include="clibs\strutil.c" />
     <ClCompile Include="config.c" />
-    <ClCompile Include="crdata.c" />
-    <ClCompile Include="crfile.c" />
     <ClCompile Include="crpat\crpat.c" />
     <ClCompile Include="export.c" />
     <ClCompile Include="faction.c" />
@@ -142,8 +140,6 @@
     <ClInclude Include="clibs\strings.h" />
     <ClInclude Include="clibs\strutil.h" />
     <ClInclude Include="config.h" />
-    <ClInclude Include="crdata.h" />
-    <ClInclude Include="crfile.h" />
     <ClInclude Include="crpat\crpat.h" />
     <ClInclude Include="faction.h" />
     <ClInclude Include="gamedata.h" />

@@ -1,145 +1,98 @@
 VERSION 66
+36;Basis
 "UTF-8";charset
-"de";locale
-1;noskillpoints
-PARTEI 1045107
+1182;Runde
+PARTEI 1
 "enno@example.com";email
 "TEAM HYLTEGATAN";Parteiname
 "de";locale
 8;age
-PARTEI 683844
-"Nasenbären";Parteiname
-"nasen@web.de";email
+PARTEI 1057
 "de";locale
-"";banner
-115;age
-4695;Optionen
-"Elfen";Typ
+937;age
+6867;Optionen
+"Menschen";Typ
+"Königreich von Troicent";Parteiname
+"troicent@t-online.de";email
 GEGENSTAENDE
-1;Schneekugel
+1;Muschel
 OPTIONEN
 1;AUSWERTUNG
+1;COMPUTER
+ALLIANZ 1021
+"Ollgrims besoffene Zwerge";Parteiname
+59;Status
+GRUPPE 17994
+"Vertraute";name
 ALLIANZ 1610124
 "Clan of Khasoc";Parteiname
 8;Status
-ALLIANZ 1404723
-"Die Orkonen";Parteiname
-8;Status
-GRUPPE 17796
-"Lorbaas";name
-ALLIANZ 1610124
-"Clan of Khasoc";Parteiname
-8;Status
-MESSAGE 642352448
-771334452;type
-"Spintax The Green (spin) verdient in Eternia (0,0) 50 Silber durch Zauberei.";rendered
-1339439;unit
-0 0 0;region
--5 -8 42;target
-50;amount
-50;wanted
-6;mode
-MESSAGE 56725696
-1740286322;type
-"Wanderer (berg) lernt viel schneller als gewöhnlich.";rendered
-532348;unit
-MESSAGE 56724256
-1740286322;type
-"Schweiger (schw) lernt viel schneller als gewöhnlich.";rendered
-1322564;unit
-PARTEI 1
-"Silivrendhel";Parteiname
-"corwin@amber.kn-bremen.de";email
-"Christian Schlittchen";banner
-"de";locale
-PARTEI 2
-"Die goldaeugigen Katzen";Parteiname
-"katze@felidae.kn-bremen.de";email
-"- Katja Zedel";banner
-"de";locale
-REGION 0 11
-284083814;id
-"Rif Londaren'Cor";Name
-"Wüste";Terrain
-"Rif Londaren'Cor - Ein alter mächtiger Name aus längst vergangener Zeit. Für die Zwerge ist es die Heimat der Scarra-Falken. Die Elfen nennen die gewaltige Wüste 'Thera'Se Ni'Char' - Land des blutigen Weges.";Beschr
-200;Bauern
-0;Pferde
-563753;Silber
-28187;Unterh
-5;Rekruten
-13;Lohn
-3;Schoesslinge
+MESSAGE 438670544
+187891574;type
+"Gletscherkorn (icy3) in Nudosobud (159,-184) rekrutiert 0 von 1 Personen.";rendered
+856587;unit
+159 -184 0;region
+0;amount
+1;want
+MESSAGE 633056272
+1235024123;type
+"Letzter Sänger (2ued) erhält 240 Silber von Vertreter des Monopols (3yi4).";rendered
+184684;unit
+240;amount
+"Silber";resource
+132709;target
+REGION 0 0
+1369585097;id
+"Ozean";Terrain
+"neighbour";visibility
+REGION 0 -1
+568795864;id
+"Midfeste";Name
+"Ebene";Terrain
+1197;Bauern
+506;Pferde
+123124;Silber
+563;Baeume
+29;Schoesslinge
 RESOURCE 1352714618
 "Schößlinge";type
-4;number
+29;number
 RESOURCE 6035652
 "Bäume";type
-4;number
+563;number
 PREISE
-4;Balsam
-35;Juwel
+100;Balsam
+125;Gewürz
+EFFECTS
+"Untote schrecken vor dieser Region zurück. (tz49)"
 GRENZE 1
 "Straße";typ
 2;richtung
 100;prozent
 GRENZE 2
 "Straße";typ
-1;richtung
+3;richtung
 100;prozent
 DURCHSCHIFFUNG
-"Freedom (g4u6)"
-"Fierfek (v4zx)"
+"The Anticipation Of A New Lover's Arrival (k5fg)"
+"Synchronize Your Dogmas (u3)"
+"Use Psychology (wghz)"
 DURCHREISE
-"Transporter of Entstity (bs8x)"
-"Brewpoun (hp9c)"
-MESSAGE 361131656
-2019496915;type
-"Der Unterhalt von sawmill (5oq3) konnte nicht gezahlt werden, das Gebäude war diese Woche nicht funktionstüchtig.";rendered
-265323;building
-BURG 802617
-"Grundmauern";Typ
-"Balmoral Castle";Name
-3;Groesse
-EINHEIT 553084
-"Mierin";Name
-2;Partei
-COMMANDS
-"UNTERHALTE"
-"LERNE \"Stangenwaffen\""
-TALENTE
-30 1;Magie
-30 1;Unterhaltung
-SPRUECHE
-"Hagel"
-"Heilung"
-"Rostregen"
-"Wolfsgeheul"
-KAMPFZAUBER 0
-"Wolfsgeheul";name
-4;level
-KAMPFZAUBER 1
-"Hagel";name
-4;level
-KAMPFZAUBER 2
-"Heilung";name
-4;level
-GEGENSTAENDE
-3;Eisen
-EINHEIT 532348
-"Wanderer";Name
-1;Partei
-COMMANDS
-"LERNE Hiebwaffen"
-TALENTE
-30 1;Bergbau
-90 2;Hiebwaffen
-MESSAGETYPE 1593006007
-"\"Deine Partei ist noch $int($turns) Wochen immun gegen Angriffe.\"";text
-"nr";section
-MESSAGETYPE 1593006008
-"\"Deine Parteien sind noch $int($turns) Wochen immun gegen Angriffe.\"";text
-"nr";section
-TRANSLATION
-"Wald";Wald
-"Phiole";Phiole
-"Ozean";Ozean
+"Transporter (u0si)"
+MESSAGE 372412880
+1585159418;type
+"Telephys The White (teLe) segnet in einem kurzen Ritual die Felder.";rendered
+1371938;mage
+BURG 228939
+"Festung";Typ
+"Nordwall Midfeste";Name
+1250;Groesse
+622247;Besitzer
+EFFECTS
+"Der Zahn der Zeit kann diesen Mauern nichts anhaben. (1pcL)"
+BURG 1538537
+"Leuchtturm";Typ
+"Leuchtturm";Name
+6072;Groesse
+427529;Besitzer
+454;Partei
