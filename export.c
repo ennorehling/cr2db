@@ -37,6 +37,7 @@ static void cr_object(cJSON *json, FILE *F, int mode, const char *name, int id)
 
     assert(json->type == cJSON_Object || json->type == cJSON_Array);
     if (mode & WRITE_ATTR) {
+        bool skills = name && strcmp(name, "TALENTE") == 0;
         assert(json->type == cJSON_Object);
         if (name) {
             if (id > 0) {
@@ -49,7 +50,13 @@ static void cr_object(cJSON *json, FILE *F, int mode, const char *name, int id)
         for (child = json->child; child; child = child->next) {
             /* first, print all simple attributes */
             if (child->type != cJSON_Object && child->type != cJSON_Array) {
-                json_to_cr(child, F);
+                if (skills) {
+                    /* TALENTE are not strings */
+                    fprintf(F, "%s;%s\n", child->valuestring, child->string);
+                }
+                else {
+                    json_to_cr(child, F);
+                }
             }
             else if (!start) {
                 /* very small optimization */
