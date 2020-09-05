@@ -11,6 +11,7 @@ struct ship;
 struct factions;
 struct regions;
 struct terrains;
+struct terrain;
 
 int db_open(const char * filename, struct sqlite3 **dbp, int version);
 int db_close(struct sqlite3 *db);
