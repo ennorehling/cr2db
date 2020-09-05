@@ -255,7 +255,7 @@ static int cb_region(region *r, void *arg)
 static void cr_header(struct gamedata *gd, FILE *F)
 {
     assert(gd);
-    fprintf(F, "VERSION 66\n36;Basis\n\"UTF-8\";charset\n%d;Runde\n", game_get_turn(gd));
+    fprintf(F, "VERSION 66\n36;Basis\n\"UTF-8\";charset\n%d;Runde\n", gd->turn);
 }
 
 int export_db(struct gamedata *gd, FILE *F)
@@ -289,7 +289,7 @@ int export_map(struct gamedata *gd, FILE *F)
 
     err = db_load_map(gd->db, &gd->regions);
     if (err != 0) return err;
-    fprintf(F, "VERSION 66\n%d;Runde\n36;Basis\n", game_get_turn(gd));
+    fprintf(F, "VERSION 66\n%d;Runde\n36;Basis\n", gd->turn);
     err = regions_walk(gd, cb_region, F);
     if (err != 0) return err;
     return 0;

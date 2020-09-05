@@ -21,7 +21,9 @@ int db_write_ship(struct sqlite3 *db, const struct ship *sh);
 int db_write_building(struct sqlite3 *db, const struct building *b);
 */
 
-int db_load_terrains(struct sqlite3 *db, struct terrains *list);
+int db_read_terrains(struct sqlite3 *db, struct terrains *list);
+int db_write_terrains(struct sqlite3 *db, const struct terrains *list);
+int db_write_terrain(struct sqlite3 *db, unsigned int id, const struct terrain *t);
 
 int db_write_faction(struct sqlite3 *db, const struct faction *f);
 int db_read_faction(struct sqlite3 *db, struct faction *f);

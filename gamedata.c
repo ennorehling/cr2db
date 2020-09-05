@@ -6,7 +6,6 @@
 #include "unit.h"
 #include "ship.h"
 #include "building.h"
-#include "config.h"
 
 #include "stb_ds.h"
 
@@ -185,10 +184,7 @@ void gd_update_region(struct gamedata *gd, struct region *r, struct cJSON *data)
                     }
                     if (strcmp(child->string, "Terrain") == 0) {
                         const char *crname = child->valuestring;
-                        const terrain *t = terrains_get_crname(&gd->terrains, crname);
-                        if (t) {
-                            r->terrain = t->id;
-                        }
+                        r->terrain = terrains_get_crname(&gd->terrains, crname);
                     }
                 }
             }
@@ -227,7 +223,7 @@ gamedata *game_create(struct sqlite3 *db)
     gamedata *gd = calloc(1, sizeof(gamedata));
     gd->db = db;
     gd->turn = -1;
-    db_load_terrains(gd->db, &gd->terrains);
+    db_read_terrains(gd->db, &gd->terrains);
     return gd;
 }
 
@@ -287,28 +283,11 @@ static int cb_load_faction(faction *cursor, void *udata) {
 int game_load(gamedata *gd)
 {
     int err;
-    err = db_load_terrains(gd->db, &gd->terrains);
+    err = db_read_terrains(gd->db, &gd->terrains);
     if (err) return err;
     err = db_regions_walk(gd->db, cb_load_region, gd);
     if (err) return err;
     return db_factions_walk(gd->db, cb_load_faction, gd);
-}
-
-int game_get_turn(struct gamedata *gd)
-{
-    if (gd->turn < 0) {
-        const char *cfg = config_get("turn", "0");
-        gd->turn = cfg ? atoi(cfg) : 0;
-    }
-    return gd->turn;
-}
-
-void game_set_turn(gamedata *gd, int turn)
-{
-    char buf[12];
-    snprintf(buf, sizeof(buf), "%d", turn);
-    config_set("turn", buf);
-    gd->turn = turn;
 }
 
 void game_free(gamedata *gd) {

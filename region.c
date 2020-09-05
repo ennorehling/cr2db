@@ -15,35 +15,41 @@ void terrains_free(terrains *all)
     stbds_shfree(all->hash_crname);
 }
 
-void terrains_add(terrains *all, const terrain *t)
+terrain *terrains_get(struct terrains *all, terrain_id id)
 {
-    int index;
-
-    assert(t);
-    stbds_arrput(all->arr, *t);
-    index = stbds_arrlen(all->arr);
-    stbds_shput(all->hash_name, t->name, index);
-    stbds_shput(all->hash_crname, t->crname, index);
+    if (id >= stbds_arrlenu(all->arr)) {
+        return NULL;
+    }
+    return all->arr + id;
 }
 
-const terrain *terrains_get_name(terrains *all, const char *name)
+void terrains_update(struct terrains *all, terrain_id id)
+{
+    terrain *t;
+    assert(id < stbds_arrlenu(all->arr));
+    t = all->arr + id;
+    stbds_shput(all->hash_name, t->name, id);
+    stbds_shput(all->hash_crname, t->crname, id);
+}
+
+terrain_id terrains_get_name(terrains *all, const char *name)
 {
     struct terrain_index *index;
     index = stbds_shgetp(all->hash_name, name);
     if (index) {
-        return all->arr + index->value;
+        return (terrain_id)index->value;
     }
-    return NULL;
+    return 0;
 }
 
-const terrain *terrains_get_crname(terrains *all, const char *crname)
+terrain_id terrains_get_crname(terrains *all, const char *crname)
 {
     struct terrain_index *index;
     index = stbds_shgetp(all->hash_crname, crname);
     if (index) {
-        return all->arr + index->value;
+        return (terrain_id)index->value;
     }
-    return NULL;
+    return 0;
 }
 
 region *create_region(region_id id, int x, int y, int z, char *name, terrain_id terrain)

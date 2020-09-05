@@ -18,9 +18,6 @@
     <ClCompile Include="atlcli.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="config.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="gamedb.c">
       <Filter>Source Files</Filter>
     </ClCompile>

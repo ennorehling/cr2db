@@ -8,14 +8,13 @@ struct unit;
 struct message;
 
 typedef struct terrain {
-    terrain_id id;
     char name[16];
     char crname[16];
 } terrain;
 
 struct terrain_index {
     char *key;
-    int value;
+    terrain_id value;
 };
 
 typedef struct terrains {
@@ -25,9 +24,10 @@ typedef struct terrains {
 } terrains;
 
 void terrains_free(terrains *all);
-void terrains_add(struct terrains *all, const struct terrain *t);
-const struct terrain * terrains_get_name(struct terrains *all, const char *name);
-const struct terrain * terrains_get_crname(struct terrains *all, const char *crname);
+terrain *terrains_get(struct terrains *all, terrain_id id);
+void terrains_update(struct terrains *all, terrain_id id);
+terrain_id terrains_get_name(struct terrains *all, const char *name);
+terrain_id terrains_get_crname(struct terrains *all, const char *crname);
 
 typedef unsigned int region_id;
 

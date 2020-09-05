@@ -34,8 +34,6 @@ struct gamedata *game_create(struct sqlite3 *db);
 int game_load(struct gamedata *gd);
 int game_save(struct gamedata *gd);
 void game_free(struct gamedata *gd);
-int game_get_turn(struct gamedata *gd);
-void game_set_turn(gamedata *gd, int turn);
 
 struct faction *gd_create_faction(struct gamedata *gd, struct cJSON *data);
 void gd_update_faction(struct gamedata *gd, struct faction *f, struct cJSON *data);

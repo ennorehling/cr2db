@@ -4,7 +4,6 @@
 #endif
 #endif
 
-#include "config.h"
 #include "gamedata.h"
 #include "gamedb.h"
 #include "region.h"
@@ -307,7 +306,6 @@ int main(int argc, char **argv) {
         return err;
     }
 
-    config_init(g_db);
     gd = game_create(g_db);
     if (i >= 1 && i < argc) {
         err = eval_command(gd, argc-i, argv + i);
@@ -318,8 +316,8 @@ int main(int argc, char **argv) {
         g_modified = false;
     }
     if (err) return err;
+    db_write_terrains(gd->db, &gd->terrains);
     game_free(gd);
-    config_done();
 
     if (g_db) {
         err = db_close(g_db);

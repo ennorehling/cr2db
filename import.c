@@ -528,8 +528,8 @@ int import(gamedata *gd, FILE *in, const char *filename)
         free(state.block_names[i]);
     }
     stbds_arrfree(state.block_names);
-    if (state.turn > game_get_turn(gd)) {
-        game_set_turn(gd, state.turn);
+    if (state.turn > gd->turn) {
+        gd->turn = state.turn;
     }
     return err;
 }

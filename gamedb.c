@@ -9,6 +9,8 @@
 #include "faction.h"
 #include "region.h"
 
+#include "stb_ds.h"
+
 #include <strings.h>
 #include <cJSON.h>
 #include <sqlite3.h>
@@ -19,6 +21,7 @@
 #include <stdio.h>
 
 static sqlite3_stmt *g_stmt_select_all_terrains;
+static sqlite3_stmt *g_stmt_insert_terrain;
 static sqlite3_stmt *g_stmt_insert_faction;
 static sqlite3_stmt *g_stmt_select_faction;
 static sqlite3_stmt *g_stmt_select_all_factions_meta;
@@ -29,8 +32,13 @@ static sqlite3_stmt *g_stmt_select_all_regions_meta;
 static int db_prepare(sqlite3 *db) {
     int err;
     err = sqlite3_prepare_v2(db,
-        "SELECT `id`, `name`, `crname` FROM `terrains` ORDER by `id`", -1,
+        "SELECT `id`, `name`, `crname` FROM `terrains` ORDER by `id` DESC", -1,
         &g_stmt_select_all_terrains, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `terrains` "
+        "(`id`, `name`, `crname`) "
+        "VALUES (?,?,?)", -1, &g_stmt_insert_terrain, NULL);
     if (err != SQLITE_OK) goto db_prepare_fail;
 
     err = sqlite3_prepare_v2(db,
@@ -252,6 +260,9 @@ int db_close(sqlite3 * db) {
     int err;
     err = sqlite3_finalize(g_stmt_select_all_terrains);
     g_stmt_select_all_terrains = NULL;
+    err = sqlite3_finalize(g_stmt_insert_terrain);
+    g_stmt_insert_terrain = NULL;
+
     err = sqlite3_finalize(g_stmt_select_all_factions_meta);
     g_stmt_select_all_factions_meta = NULL;
     err = sqlite3_finalize(g_stmt_select_all_regions_meta);
@@ -503,7 +514,45 @@ db_delete_objects_fail:
     return err;
 }
 
-int db_load_terrains(struct sqlite3 *db, terrains *list)
+int db_write_terrain(struct sqlite3 *db, unsigned int id, const terrain *t)
+{
+    int err;
+
+    err = sqlite3_reset(g_stmt_insert_terrain);
+    if (err != SQLITE_OK) goto db_write_terrain_fail;
+    err = sqlite3_bind_int64(g_stmt_insert_terrain, 1, (sqlite3_int64)id);
+    if (err != SQLITE_OK) goto db_write_terrain_fail;
+    err = sqlite3_bind_text(g_stmt_insert_terrain, 2, t->name, -1, SQLITE_STATIC);
+    if (err != SQLITE_OK) goto db_write_terrain_fail;
+    err = sqlite3_bind_text(g_stmt_insert_terrain, 3, t->crname, -1, SQLITE_STATIC);
+    if (err != SQLITE_OK) goto db_write_terrain_fail;
+
+    err = sqlite3_step(g_stmt_insert_terrain);
+    if (err != SQLITE_DONE) goto db_write_terrain_fail;
+    return SQLITE_OK;
+
+db_write_terrain_fail:
+    err = sqlite3_extended_errcode(db);
+    fputs(sqlite3_errmsg(db), stderr);
+    return err;
+}
+
+int db_write_terrains(struct sqlite3 *db, const struct terrains *list)
+{
+    unsigned int i, len;
+    int rc = SQLITE_OK;
+    for (i = 0, len = stbds_arrlenu(list->arr); i != len; ++i) {
+        terrain *t = list->arr + i;
+        int err = db_write_terrain(db, i, t);
+        if (err != SQLITE_OK && rc == SQLITE_OK) {
+            /* return only the first error code */
+            rc = err;
+        }
+    }
+    return rc;
+}
+
+int db_read_terrains(struct sqlite3 *db, terrains *list)
 {
     int err;
 
@@ -516,18 +565,22 @@ int db_load_terrains(struct sqlite3 *db, terrains *list)
         }
         else if (err == SQLITE_ROW) {
             const char * str;
-            terrain t;
-            t.id = sqlite3_column_int(g_stmt_select_all_terrains, 0);
+            terrain *t;
+            int index = sqlite3_column_int(g_stmt_select_all_terrains, 0);
+            if (list->arr == NULL) {
+                list->arr = stbds_arraddnptr(list->arr, 1 + index);
+            }
+            t = terrains_get(list, index);
             str = (const char *) sqlite3_column_text(g_stmt_select_all_terrains, 1);
-            str_strlcpy(t.name, str, sizeof(t.name));
+            str_strlcpy(t->name, str, sizeof(t->name));
             str = (const char *) sqlite3_column_text(g_stmt_select_all_terrains, 2);
             if (str) {
-                str_strlcpy(t.crname, str, sizeof(t.crname));
+                str_strlcpy(t->crname, str, sizeof(t->crname));
             }
             else {
-                t.crname[0] = 0;
+                t->crname[0] = 0;
             }
-            terrains_add(list, &t);
+            terrains_update(list, index);
         }
         else goto db_load_terrains_fail;
     }

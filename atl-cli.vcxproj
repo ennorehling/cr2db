@@ -115,7 +115,6 @@
     <ClCompile Include="clibs\selist.c" />
     <ClCompile Include="clibs\strings.c" />
     <ClCompile Include="clibs\strutil.c" />
-    <ClCompile Include="config.c" />
     <ClCompile Include="crpat\crpat.c" />
     <ClCompile Include="export.c" />
     <ClCompile Include="faction.c" />
