@@ -307,6 +307,8 @@ int main(int argc, char **argv) {
     }
 
     gd = game_create(g_db);
+    err = gd_load_config(gd);
+    if (err) return err;
     if (i >= 1 && i < argc) {
         err = eval_command(gd, argc-i, argv + i);
         if (err) return err;
@@ -316,7 +318,6 @@ int main(int argc, char **argv) {
         g_modified = false;
     }
     if (err) return err;
-    db_write_terrains(gd->db, &gd->terrains);
     game_free(gd);
 
     if (g_db) {

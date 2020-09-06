@@ -1,3 +1,5 @@
+#define _CRT_SECURE_NO_WARNINGS
+
 #include "gamedata.h"
 
 #include "gamedb.h"
@@ -183,8 +185,12 @@ void gd_update_region(struct gamedata *gd, struct region *r, struct cJSON *data)
                         r->name = str_strdup(child->valuestring);
                     }
                     if (strcmp(child->string, "Terrain") == 0) {
-                        const char *crname = child->valuestring;
-                        r->terrain = terrains_get_crname(&gd->terrains, crname);
+                        const char *name = child->valuestring;
+                        r->terrain = terrains_find(&gd->terrains, name);
+                        if (r->terrain == 0) {
+                            /* special terrain, not in the config or database */
+                            r->terrain = terrains_add(&gd->terrains, name);
+                        }
                     }
                 }
             }
@@ -218,12 +224,25 @@ void region_reset(struct gamedata *gd, struct region *r)
     stbds_arrfree(r->units);
 }
 
+int gd_load_config(gamedata *gd)
+{
+    int err;
+    err = db_read_terrains(gd->db, &gd->terrains);
+    if (err) return err;
+    // load_terrains("res/terrains.json");
+    return 0;
+}
+
+static int gd_save_config(const gamedata *gd)
+{
+    return db_write_terrains(gd->db, &gd->terrains);
+}
+
 gamedata *game_create(struct sqlite3 *db)
 {
     gamedata *gd = calloc(1, sizeof(gamedata));
     gd->db = db;
     gd->turn = -1;
-    db_read_terrains(gd->db, &gd->terrains);
     return gd;
 }
 
@@ -233,24 +252,30 @@ int game_save(gamedata *gd)
     int err;
 
     err = db_execute(gd->db, "BEGIN TRANSACTION");
-    if (err) return err;
+    if (err) goto abort_save;
+    err = gd_save_config(gd);
+    if (err) goto abort_save;
 
     for (i = 0, len = stbds_arrlen(gd->factions.arr); i != len; ++i) {
         faction *f = gd->factions.arr[i];
         err = db_write_faction(gd->db, f);
-        if (err) return err;
+        if (err) goto abort_save;
     }
 
     for (i = 0, len = stbds_arrlen(gd->regions.arr); i != len; ++i) {
         region *r = gd->regions.arr[i];
         int err = db_write_region(gd->db, r);
-        if (err) return err;
+        if (err) goto abort_save;
     }
 
     err = db_execute(gd->db, "COMMIT");
-    if (err) return err;
+    if (err) goto abort_save;
 
     return 0;
+
+abort_save:
+    db_execute(gd->db, "ROLLBACK");
+    return err;
 }
 
 static int cb_load_region(region *cursor, void *udata) {

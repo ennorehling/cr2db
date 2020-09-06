@@ -8,41 +8,22 @@ CREATE TABLE config (
 DROP TABLE IF EXISTS terrains;
 CREATE TABLE terrains (
     id INTEGER NOT NULL PRIMARY KEY,
-    name TEXT,
-    crname TEXT
+    name TEXT NOT NULL
 );
 
-INSERT INTO terrains (id, name, crname) VALUES (0, 'unknown', 'Unbekannt');
-INSERT INTO terrains (id, name, crname) VALUES (1, 'ocean', 'Ozean');
-INSERT INTO terrains (id, name, crname) VALUES (2, 'firewall', 'Feuerwand');
-INSERT INTO terrains (id, name, crname) VALUES (3, 'glacier', 'Gletscher');
-INSERT INTO terrains (id, name, crname) VALUES (4, 'plain', 'Ebene');
-INSERT INTO terrains (id, name, crname) VALUES (5, 'swamp', 'Sumpf');
-INSERT INTO terrains (id, name, crname) VALUES (6, 'desert', 'Wüste');
-INSERT INTO terrains (id, name, crname) VALUES (7, 'packice', 'Packeis');
-INSERT INTO terrains (id, name, crname) VALUES (8, 'highland', 'Hochland');
-INSERT INTO terrains (id, name, crname) VALUES (9, 'mountain', 'Berge');
-INSERT INTO terrains (id, name, crname) VALUES (10, 'volcano', 'Vulkan');
-INSERT INTO terrains (id, name, crname) VALUES (11, 'volcano_active', 'Aktiver Vulkan');
-INSERT INTO terrains (id, name, crname) VALUES (12, 'iceberg', 'Eisberg');
-INSERT INTO terrains (id, name, crname) VALUES (13, 'fog', 'Nebel');
-INSERT INTO terrains (id, name, crname) VALUES (14, 'fog_thick', 'Dichter Nebel');
+INSERT INTO terrains (id, name) VALUES (1, "Ozean");
 
 DROP TABLE IF EXISTS building_types;
 CREATE TABLE building_types (
     id INTEGER NOT NULL PRIMARY KEY,
-    crname TEXT
+    name TEXT
 );
-
-INSERT INTO building_types (id, crname) VALUES (0, 'Unbekannt');
 
 DROP TABLE IF EXISTS ship_types;
 CREATE TABLE ship_types (
     id INTEGER NOT NULL PRIMARY KEY,
-    crname TEXT
+    name TEXT
 );
-
-INSERT INTO ship_types (id, crname) VALUES (0, 'Unbekannt');
 
 DROP TABLE IF EXISTS regions;
 CREATE TABLE regions (

@@ -1,34 +1,6 @@
 #pragma once
 
 typedef unsigned int terrain_id;
-
-struct building;
-struct ship;
-struct unit;
-struct message;
-
-typedef struct terrain {
-    char name[16];
-    char crname[16];
-} terrain;
-
-struct terrain_index {
-    char *key;
-    terrain_id value;
-};
-
-typedef struct terrains {
-    terrain *arr;
-    struct terrain_index *hash_name;
-    struct terrain_index *hash_crname;
-} terrains;
-
-void terrains_free(terrains *all);
-terrain *terrains_get(struct terrains *all, terrain_id id);
-void terrains_update(struct terrains *all, terrain_id id);
-terrain_id terrains_get_name(struct terrains *all, const char *name);
-terrain_id terrains_get_crname(struct terrains *all, const char *crname);
-
 typedef unsigned int region_id;
 
 typedef struct region_xyz {

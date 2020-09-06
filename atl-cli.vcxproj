@@ -126,6 +126,7 @@
     <ClCompile Include="region.c" />
     <ClCompile Include="ship.c" />
     <ClCompile Include="stblibs.c" />
+    <ClCompile Include="terrain.c" />
     <ClCompile Include="unit.c" />
   </ItemGroup>
   <ItemGroup>

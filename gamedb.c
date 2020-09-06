@@ -32,13 +32,13 @@ static sqlite3_stmt *g_stmt_select_all_regions_meta;
 static int db_prepare(sqlite3 *db) {
     int err;
     err = sqlite3_prepare_v2(db,
-        "SELECT `id`, `name`, `crname` FROM `terrains` ORDER by `id` DESC", -1,
+        "SELECT `id`, `name` FROM `terrains` ORDER by `id` DESC", -1,
         &g_stmt_select_all_terrains, NULL);
     if (err != SQLITE_OK) goto db_prepare_fail;
     err = sqlite3_prepare_v2(db,
         "INSERT OR REPLACE INTO `terrains` "
-        "(`id`, `name`, `crname`) "
-        "VALUES (?,?,?)", -1, &g_stmt_insert_terrain, NULL);
+        "(`id`, `name`) "
+        "VALUES (?,?)", -1, &g_stmt_insert_terrain, NULL);
     if (err != SQLITE_OK) goto db_prepare_fail;
 
     err = sqlite3_prepare_v2(db,
@@ -524,8 +524,6 @@ int db_write_terrain(struct sqlite3 *db, unsigned int id, const terrain *t)
     if (err != SQLITE_OK) goto db_write_terrain_fail;
     err = sqlite3_bind_text(g_stmt_insert_terrain, 2, t->name, -1, SQLITE_STATIC);
     if (err != SQLITE_OK) goto db_write_terrain_fail;
-    err = sqlite3_bind_text(g_stmt_insert_terrain, 3, t->crname, -1, SQLITE_STATIC);
-    if (err != SQLITE_OK) goto db_write_terrain_fail;
 
     err = sqlite3_step(g_stmt_insert_terrain);
     if (err != SQLITE_DONE) goto db_write_terrain_fail;
@@ -566,21 +564,17 @@ int db_read_terrains(struct sqlite3 *db, terrains *list)
         else if (err == SQLITE_ROW) {
             const char * str;
             terrain *t;
-            int index = sqlite3_column_int(g_stmt_select_all_terrains, 0);
+            terrain_id id = (terrain_id)sqlite3_column_int(g_stmt_select_all_terrains, 0);
+            unsigned int index = (unsigned int)id - 1;
             if (list->arr == NULL) {
-                list->arr = stbds_arraddnptr(list->arr, 1 + index);
+                unsigned int rows = 1 + index;
+                list->arr = stbds_arraddnptr(list->arr, rows);
             }
-            t = terrains_get(list, index);
+            t = terrains_get(list, id);
             str = (const char *) sqlite3_column_text(g_stmt_select_all_terrains, 1);
             str_strlcpy(t->name, str, sizeof(t->name));
-            str = (const char *) sqlite3_column_text(g_stmt_select_all_terrains, 2);
-            if (str) {
-                str_strlcpy(t->crname, str, sizeof(t->crname));
-            }
-            else {
-                t->crname[0] = 0;
-            }
-            terrains_update(list, index);
+            memset(&t->data, 0, sizeof(t->data));
+            terrains_update(list, id);
         }
         else goto db_load_terrains_fail;
     }
