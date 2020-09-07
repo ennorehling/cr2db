@@ -1,11 +1,13 @@
 {
 	"Ozean": {},
 	"Ebene": {},
+	"Wald": {},
 	"Wüste": {},
 	"Sumpf": {},
 	"Hochland": {},
 	"Berge": {},
 	"Gletscher": {},
-	"Feuerwand": {},
-	"Vulkan": {}
+	"Vulkan": {},
+	"Aktiver Vulkan": {},
+	"Feuerwand": {}
 }
