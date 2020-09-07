@@ -246,7 +246,7 @@ int gd_load_config(gamedata *gd)
     if (err && !result) result = err;
     err = config_load_buildings(&gd->building_types, "res/buildings.json");
     if (err && !result) result = err;
-    err = config_load_ships(&gd->ship_types, "res/buildings.json");
+    err = config_load_ships(&gd->ship_types, "res/ships.json");
     if (err && !result) result = err;
     return result;
 }
