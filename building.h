@@ -3,7 +3,7 @@
 struct region;
 
 typedef unsigned int building_id;
-typedef unsigned int building_t;
+typedef int building_t;
 
 typedef struct building {
     building_id id;

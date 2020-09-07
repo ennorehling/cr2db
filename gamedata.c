@@ -2,6 +2,8 @@
 
 #include "gamedata.h"
 
+#include "config.h"
+
 #include "gamedb.h"
 #include "faction.h"
 #include "region.h"
@@ -139,6 +141,17 @@ void gd_update_building(gamedata *gd, building *b, cJSON *data)
                         b->id = child->valueint;
                     }
                 }
+                else if (child->type == cJSON_String) {
+                    if (strcmp(child->string, "Typ") == 0) {
+                        b->type = bt_find(&gd->building_types, child->valuestring);
+                        if (b->type < 0) {
+                            b->type = bt_add(&gd->building_types, child->valuestring);
+                        }
+                    }
+                    else if (strcmp(child->string, "Name") == 0) {
+                        b->name = str_strdup(child->valuestring);
+                    }
+                }
             }
         }
         cJSON_Delete(b->data);
@@ -226,11 +239,16 @@ void region_reset(struct gamedata *gd, struct region *r)
 
 int gd_load_config(gamedata *gd)
 {
-    int err;
-    err = db_read_terrains(gd->db, &gd->terrains);
+    int err, result = 0;
+    err = db_read_config(gd->db, gd);
     if (err) return err;
-    // load_terrains("res/terrains.json");
-    return 0;
+    err = config_load_terrains(&gd->terrains, "res/terrains.json");
+    if (err && !result) result = err;
+    err = config_load_buildings(&gd->building_types, "res/buildings.json");
+    if (err && !result) result = err;
+    err = config_load_ships(&gd->ship_types, "res/buildings.json");
+    if (err && !result) result = err;
+    return result;
 }
 
 static int gd_save_config(const gamedata *gd)
@@ -308,7 +326,7 @@ static int cb_load_faction(faction *cursor, void *udata) {
 int game_load(gamedata *gd)
 {
     int err;
-    err = db_read_terrains(gd->db, &gd->terrains);
+    err = db_read_config(gd->db, gd);
     if (err) return err;
     err = db_regions_walk(gd->db, cb_load_region, gd);
     if (err) return err;

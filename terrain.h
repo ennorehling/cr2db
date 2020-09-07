@@ -1,14 +1,12 @@
 #pragma once
 
+struct cJSON;
+
 typedef unsigned int terrain_id;
 
 typedef struct terrain {
     char name[16];
-    struct terrain_data {
-        unsigned int flags;
-        int max_work;
-        int road_cost;
-    } data;
+    struct cJSON *data;
 } terrain;
 
 struct terrain_index {

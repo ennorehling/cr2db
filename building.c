@@ -1,6 +1,8 @@
 #include "building.h"
 
 #include <cJSON.h>
+
+#include <assert.h>
 #include <stdlib.h>
 
 void building_free(building *b)

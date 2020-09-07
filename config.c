@@ -5,104 +5,111 @@
 #endif
 
 #include "config.h"
+#include "terrain.h"
 
-#include <sqlite3.h>
+#include "stb_ds.h"
 
-#include <stddef.h>
+#include <cJSON.h>
+
+#include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 
-static struct sqlite3 *config_db;
-static sqlite3_stmt *g_stmt_update_config;
-static sqlite3_stmt *g_stmt_delete_config;
-static sqlite3_stmt *g_stmt_select_config;
-
-int config_init(struct sqlite3 *db)
+building_t bt_find(building_types *all, const char * name)
 {
-    int err;
-    if ((err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `config` (`key`, `value`) VALUES (?,?)", -1,
-        &g_stmt_update_config, NULL)) != SQLITE_OK) return err;
-    if ((err = sqlite3_prepare_v2(db,
-        "SELECT `value` FROM `config` WHERE `key` = ?", -1,
-        &g_stmt_select_config, NULL)) != SQLITE_OK) return err;
-    if ((err = sqlite3_prepare_v2(db,
-        "DELETE FROM `config` WHERE `key` = ?", -1,
-        &g_stmt_delete_config, NULL)) != SQLITE_OK) return err;
-
-    config_db = db;
-    return SQLITE_OK;
+    struct building_type_index *index;
+    index = stbds_shgetp(all->hash_name, name);
+    if (index) {
+        return index->value;
+    }
+    return -1;
 }
 
-const char *config_get(const char *key, const char *def)
+building_t bt_add(building_types *all, const char * name)
 {
-    int err;
-    
-    err = sqlite3_reset(g_stmt_select_config);
-    if (err != 0) return NULL;
-    err = sqlite3_bind_text(g_stmt_select_config, 1, key, -1, SQLITE_STATIC);
-    if (err != 0) return NULL;
+    building_t index = (building_t)stbds_arraddnoff(all->arr, 1);
+    building_type *btype = bt_get(all, index);
 
-    err = sqlite3_step(g_stmt_select_config);
-    if (SQLITE_ROW == err) {
-        return (const char *)sqlite3_column_text(g_stmt_select_config, 0);
-    }
-    else if (SQLITE_DONE == err) {
-        return def;
-    }
-    return NULL;
+    strncpy(btype->name, name, sizeof(btype->name));
+    btype->data = NULL;
+    return index;
 }
 
-int config_set(const char *key, const char *value)
+building_type *bt_get(building_types *all, building_t type)
 {
-    int err;
-
-    err = sqlite3_reset(g_stmt_update_config);
-    if (err != 0) goto config_set_fail;
-    err = sqlite3_bind_text(g_stmt_update_config, 1, key, -1, SQLITE_STATIC);
-    if (err != 0) goto config_set_fail;
-    if (value != NULL) {
-        err = sqlite3_bind_text(g_stmt_update_config, 2, value, -1, SQLITE_STATIC);
+    assert(type >= 0);
+    if (type >= stbds_arrlen(all->arr)) {
+        return NULL;
     }
-    else {
-        err = sqlite3_bind_null(g_stmt_update_config, 2);
-    }
-    if (err != 0) goto config_set_fail;
-    err = sqlite3_step(g_stmt_update_config);
-    if (err != 0) goto config_set_fail;
-
-    return SQLITE_OK;
-
-config_set_fail:
-    fputs(sqlite3_errmsg(config_db), stderr);
-    return err;
+    return all->arr + type;
 }
 
-int config_delete(const char *key) {
-    int err;
-
-    err = sqlite3_reset(g_stmt_delete_config);
-    if (err != 0) goto config_delete_fail;
-    err = sqlite3_bind_text(g_stmt_delete_config, 1, key, -1, SQLITE_STATIC);
-    if (err != 0) goto config_delete_fail;
-    err = sqlite3_step(g_stmt_delete_config);
-    if (err != 0) goto config_delete_fail;
-
-    return SQLITE_OK;
-
-config_delete_fail:
-    fputs(sqlite3_errmsg(config_db), stderr);
-    return err;
+static cJSON *load_json(FILE *F)
+{
+    cJSON *config;
+    char *data;
+    size_t sz;
+    long pos;
+    fseek(F, 0, SEEK_END);
+    pos = ftell(F);
+    rewind(F);
+    data = malloc(pos + 1);
+    if (!data) abort();
+    sz = fread(data, 1, (size_t)pos, F);
+    data[sz] = 0;
+    config = cJSON_Parse(data);
+    free(data);
+    return config;
 }
 
-int config_done(void)
+int config_load_terrains(struct terrains *types, const char * filename)
 {
-    int err;
-    if ((err = sqlite3_finalize(g_stmt_delete_config)) != SQLITE_OK) return err;
-    g_stmt_delete_config = NULL;
-    if ((err = sqlite3_finalize(g_stmt_select_config)) != SQLITE_OK) return err;
-    g_stmt_select_config = NULL;
-    if ((err = sqlite3_finalize(g_stmt_update_config)) != SQLITE_OK) return err;
-    g_stmt_update_config = NULL;
-    config_db = NULL;
-    return SQLITE_OK;
+    FILE * F = fopen(filename, "rt");
+    cJSON *json;
+    if (!F) {
+        return errno;
+    }
+    /* TODO: implement loading */
+    json = load_json(F);
+    if (json && json->type == cJSON_Object) {
+        cJSON *child;
+        for (child = json->child; child; child = child->next) {
+            terrain_id id = terrains_find(types, child->string);
+            terrain *t;
+            if (id == 0) {
+                id = terrains_add(types, child->string);
+            }
+            t = terrains_get(types, id);
+            if (t->data) {
+                cJSON_Delete(t->data);
+            }
+            t->data = child;
+        }
+        json->child = NULL;
+        cJSON_Delete(json);
+    }
+    (void)types;
+    return fclose(F);
+}
+
+int config_load_buildings(struct building_types *types, const char * filename)
+{
+    FILE * F = fopen(filename, "rt");
+    if (!F) {
+        return errno;
+    }
+    /* TODO: implement loading */
+    (void)types;
+    return fclose(F);
+}
+
+int config_load_ships(struct ship_types *types, const char * filename)
+{
+    FILE * F = fopen(filename, "rt");
+    if (!F) {
+        return errno;
+    }
+    /* TODO: implement loading */
+    (void)types;
+    return fclose(F);
 }

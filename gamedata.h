@@ -1,8 +1,10 @@
 #pragma once
 
-#include "terrain.h"
 #include "region.h"
 #include "faction.h"
+
+#include "terrain.h"
+#include "config.h"
 
 #include <stdbool.h>
 
@@ -22,9 +24,12 @@ typedef struct battle {
 typedef struct gamedata {
     struct sqlite3 *db;
     int turn;
-    struct terrains terrains;
     struct regions regions;
     struct factions factions;
+
+    struct terrains terrains;
+    struct building_types building_types;
+    struct ship_types ship_types;
 } gamedata;
 
 int factions_walk(struct gamedata *gd, int (*callback)(struct faction *, void *), void *arg);

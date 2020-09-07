@@ -21,7 +21,7 @@ terrain_id terrains_add(struct terrains *all, const char *name)
     terrain_id id = (terrain_id) index + 1;
     terrain *t = terrains_get(all, id);
     strncpy(t->name, name, sizeof(t->name));
-    memset(&t->data, 0, sizeof(t->data));
+    t->data = NULL;
     terrains_update(all, id);
     return id;
 }

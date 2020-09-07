@@ -655,3 +655,33 @@ int db_execute(struct sqlite3 *db, const char *sql)
 {
     return sqlite3_exec(db, sql, NULL, NULL, NULL);
 }
+
+int db_read_building_types(struct sqlite3 *db, building_types *types)
+{
+    return SQLITE_OK;
+}
+
+int db_write_building_types(struct sqlite3 *db, const building_types *types)
+{
+    return SQLITE_OK;
+}
+
+int db_read_config(struct sqlite3 *db, struct gamedata *gd)
+{
+    int err;
+    err = db_read_terrains(db, &gd->terrains);
+    if (err != SQLITE_OK) return err;
+    err = db_read_building_types(db, &gd->building_types);
+    if (err != SQLITE_OK) return err;
+    return SQLITE_OK;
+}
+
+int db_write_config(struct sqlite3 *db, const struct gamedata *gd)
+{
+    int err;
+    err = db_write_terrains(db, &gd->terrains);
+    if (err != SQLITE_OK) return err;
+    err = db_write_building_types(db, &gd->building_types);
+    if (err != SQLITE_OK) return err;
+    return SQLITE_OK;
+}
