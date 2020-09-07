@@ -8,6 +8,7 @@ struct ship_type;
 struct ship_types;
 
 typedef int building_t;
+typedef int ship_t;
 
 typedef struct building_type {
     char name[32];
@@ -33,11 +34,21 @@ typedef struct ship_type {
     struct cJSON *data;
 } ship_type;
 
+struct ship_type_index {
+    char *key;
+    ship_t value;
+};
+
 typedef struct ship_types {
     struct ship_type *arr;
+    struct ship_type_index *hash_name;
 } ship_types;
 
 int config_load_terrains(struct terrains *types, const char * filename);
 int config_load_buildings(struct building_types *types, const char * filename);
 int config_load_ships(struct ship_types *types, const char * filename);
+
+void config_free_terrains(struct terrains *types);
+void config_free_buildings(struct building_types *types);
+void config_free_ships(struct ship_types *types);
 

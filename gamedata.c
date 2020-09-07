@@ -336,5 +336,8 @@ int game_load(gamedata *gd)
 void game_free(gamedata *gd) {
     factions_free(&gd->factions);
     regions_free(&gd->regions);
+    config_free_buildings(&gd->building_types);
+    config_free_ships(&gd->ship_types);
+    config_free_terrains(&gd->terrains);
     gd->db = NULL;
 }

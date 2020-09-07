@@ -113,3 +113,35 @@ int config_load_ships(struct ship_types *types, const char * filename)
     (void)types;
     return fclose(F);
 }
+
+void config_free_terrains(struct terrains *types)
+{
+    int i, len = stbds_arrlen(types->arr);
+    for (i = 0; i != len; ++i) {
+        cJSON_Delete(types->arr[i].data);
+    }
+    stbds_arrfree(types->arr);
+    stbds_shfree(types->hash_name);
+}
+
+void config_free_buildings(struct building_types *types)
+{
+    int i, len = stbds_arrlen(types->arr);
+    for (i = 0; i != len; ++i) {
+        cJSON_Delete(types->arr[i].data);
+    }
+    stbds_arrfree(types->arr);
+    stbds_shfree(types->hash_name);
+}
+
+void config_free_ships(struct ship_types *types)
+{
+    int i, len = stbds_arrlen(types->arr);
+    for (i = 0; i != len; ++i) {
+        cJSON_Delete(types->arr[i].data);
+    }
+    stbds_arrfree(types->arr);
+    stbds_shfree(types->hash_name);
+}
+
+

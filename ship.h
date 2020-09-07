@@ -1,7 +1,7 @@
 #pragma once
 
 typedef unsigned int ship_id;
-typedef unsigned int ship_t;
+typedef int ship_t;
 
 typedef struct ship {
     ship_id id;
