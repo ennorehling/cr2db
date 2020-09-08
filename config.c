@@ -44,6 +44,35 @@ building_type *bt_get(building_types *all, building_t type)
     return all->arr + type;
 }
 
+ship_t st_find(ship_types *all, const char * name)
+{
+    struct ship_type_index *index;
+    index = stbds_shgetp(all->hash_name, name);
+    if (index) {
+        return index->value;
+    }
+    return -1;
+}
+
+ship_t st_add(ship_types *all, const char * name)
+{
+    ship_t index = (ship_t)stbds_arraddnoff(all->arr, 1);
+    ship_type *btype = st_get(all, index);
+
+    strncpy(btype->name, name, sizeof(btype->name));
+    btype->data = NULL;
+    return index;
+}
+
+ship_type *st_get(ship_types *all, ship_t type)
+{
+    assert(type >= 0);
+    if (type >= stbds_arrlen(all->arr)) {
+        return NULL;
+    }
+    return all->arr + type;
+}
+
 static cJSON *load_json(FILE *F)
 {
     cJSON *config;

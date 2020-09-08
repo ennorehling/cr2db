@@ -11,6 +11,7 @@
 #include "unit.h"
 #include "ship.h"
 #include "building.h"
+#include "ship.h"
 #include "region.h"
 #include "message.h"
 #include "crfile.h"
@@ -128,6 +129,12 @@ static void gd_update(parser_t *p) {
             gd_add_building(p->gd, p->building);
             p->root = NULL;
         }
+        else if (p->ship) {
+            p->ship->region = p->region;
+            gd_update_ship(p->gd, p->ship, p->root);
+            gd_add_ship(p->gd, p->ship);
+            p->root = NULL;
+        }
         else if (p->region) {
             gd_update_region(p->gd, p->region, p->root);
             gd_add_region(p->gd, p->region);
@@ -241,6 +248,7 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
     if (keyc == 1) {
         static const char *name_faction = "PARTEI";
         static const char *name_building = "BURG";
+        static const char *name_ship = "SCHIFF";
         if (strcmp(name_faction, name) == 0) {
             faction *f = calloc(1, sizeof(faction));
             f->id = keyv[0];
@@ -258,6 +266,15 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
             p->root = block = cJSON_CreateObject();
             p->stack_top = 1; /* only REGOIN is below this on the stack */
             stack_push(p, block, name_building);
+        }
+        else if (strcmp(name_ship, name) == 0) {
+            ship *b = calloc(1, sizeof(ship));
+            b->id = keyv[0];
+            b->region = p->region;
+            p->ship = b;
+            p->root = block = cJSON_CreateObject();
+            p->stack_top = 1; /* only REGOIN is below this on the stack */
+            stack_push(p, block, name_ship);
         }
         else if (strcmp("MESSAGE", name) == 0) {
             if (p->battle) {

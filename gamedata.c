@@ -160,6 +160,57 @@ void gd_update_building(gamedata *gd, building *b, cJSON *data)
     }
 }
 
+void gd_add_ship(gamedata *gd, ship *obj)
+{
+    assert(gd);
+    assert(obj);
+    assert(obj->region);
+    stbds_arrpush(obj->region->ships, obj);
+    // ships_add(&gd->ships, obj);
+}
+
+ship *gd_create_ship(gamedata *gd, region *r, cJSON *data)
+{
+    ship * obj = calloc(1, sizeof(ship));
+    assert(gd);
+    assert(r);
+    obj->region = r;
+    gd_update_ship(gd, obj, data);
+    gd_add_ship(gd, obj);
+    return obj;
+}
+
+void gd_update_ship(gamedata *gd, ship *obj, cJSON *data)
+{
+    assert(gd);
+    assert(obj);
+    if (obj->data != data) {
+        if (data) {
+            cJSON * child;
+            for (child = data->child; child != NULL; child = child->next) {
+                if (obj->id == 0 && child->type == cJSON_Number) {
+                    if (strcmp(child->string, "id") == 0) {
+                        obj->id = child->valueint;
+                    }
+                }
+                else if (child->type == cJSON_String) {
+                    if (strcmp(child->string, "Typ") == 0) {
+                        obj->type = st_find(&gd->ship_types, child->valuestring);
+                        if (obj->type < 0) {
+                            obj->type = st_add(&gd->ship_types, child->valuestring);
+                        }
+                    }
+                    else if (strcmp(child->string, "Name") == 0) {
+                        obj->name = str_strdup(child->valuestring);
+                    }
+                }
+            }
+        }
+        cJSON_Delete(obj->data);
+        obj->data = data;
+    }
+}
+
 void gd_add_region(gamedata *gd, region *r)
 {
     regions_add(&gd->regions, r);

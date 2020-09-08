@@ -52,6 +52,10 @@ void gd_update_region(struct gamedata *gd, struct region *r, struct cJSON *data)
 void gd_add_region(struct gamedata *gd, struct region *r);
 void region_reset(struct gamedata *gd, struct region *r);
 
+struct ship *gd_create_ship(struct gamedata *gd, struct region *r, struct cJSON *data);
+void gd_update_ship(struct gamedata *gd, struct ship *b, struct cJSON *data);
+void gd_add_ship(struct gamedata *gd, struct ship *b);
+
 struct building *gd_create_building(struct gamedata *gd, struct region *r, struct cJSON *data);
 void gd_update_building(struct gamedata *gd, struct building *b, struct cJSON *data);
 void gd_add_building(struct gamedata *gd, struct building *b);

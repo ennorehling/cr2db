@@ -44,6 +44,10 @@ typedef struct ship_types {
     struct ship_type_index *hash_name;
 } ship_types;
 
+ship_t st_find(ship_types *all, const char * name);
+ship_t st_add(ship_types *all, const char * name);
+ship_type *st_get(ship_types *all, ship_t type);
+
 int config_load_terrains(struct terrains *types, const char * filename);
 int config_load_buildings(struct building_types *types, const char * filename);
 int config_load_ships(struct ship_types *types, const char * filename);
