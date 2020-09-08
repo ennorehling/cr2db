@@ -26,6 +26,7 @@ if (SQLITE3_FOUND)
     atlcli.c
     stblibs.c
     import.c
+    config.c
     export.c
     log.c
     crfile.c

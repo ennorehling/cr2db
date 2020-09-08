@@ -111,6 +111,7 @@ void gd_update_faction(gamedata *gd, faction *f, cJSON *data)
 
 void gd_add_building(gamedata *gd, building *b)
 {
+    assert(gd);
     assert(b);
     assert(b->region);
     stbds_arrpush(b->region->buildings, b);

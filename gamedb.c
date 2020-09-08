@@ -658,11 +658,16 @@ int db_execute(struct sqlite3 *db, const char *sql)
 
 int db_read_building_types(struct sqlite3 *db, building_types *types)
 {
+    /* TODO: implement this function */
+    assert(db);
+    assert(types);
     return SQLITE_OK;
 }
 
 int db_write_building_types(struct sqlite3 *db, const building_types *types)
 {
+    assert(db);
+    assert(types);
     return SQLITE_OK;
 }
 
