@@ -72,8 +72,9 @@ int config_load_terrains(struct terrains *types, const char * filename)
     /* TODO: implement loading */
     json = load_json(F);
     if (json && json->type == cJSON_Object) {
-        cJSON *child;
-        for (child = json->child; child; child = child->next) {
+        cJSON **it;
+        for (it = &json->child; *it;) {
+            cJSON *child = *it;
             terrain_id id = terrains_find(types, child->string);
             terrain *t;
             if (id == 0) {
@@ -84,6 +85,8 @@ int config_load_terrains(struct terrains *types, const char * filename)
                 cJSON_Delete(t->data);
             }
             t->data = child;
+            *it = child->next;
+            child->next = NULL;
         }
         json->child = NULL;
         cJSON_Delete(json);
