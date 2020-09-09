@@ -31,6 +31,7 @@ index_t config_add(config *cfg, const char * name)
 
     strncpy(c->name, name, sizeof(c->name));
     c->data = NULL;
+    stbds_shput(cfg->hash_name, name, index);
     return index;
 }
 

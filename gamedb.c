@@ -594,7 +594,7 @@ int db_read_tuples(struct sqlite3 *db, struct sqlite3_stmt *stmt, config *cfg)
             config_data * t;
 
             if (cfg->arr == NULL) {
-                cfg->arr = stbds_arraddnptr(cfg->arr, index);
+                cfg->arr = stbds_arraddnptr(cfg->arr, index + 1);
             }
             t = config_get(cfg, index);
             str_strlcpy(t->name, name, sizeof(t->name));

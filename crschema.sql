@@ -14,7 +14,7 @@ CREATE TABLE terrains (
     name TEXT NOT NULL
 );
 
-INSERT INTO terrains (id, name) VALUES (1, "Ozean");
+INSERT INTO terrains (id, name) VALUES (0, "Ozean");
 
 DROP TABLE IF EXISTS building_types;
 CREATE TABLE building_types (
