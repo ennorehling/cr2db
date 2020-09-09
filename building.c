@@ -11,7 +11,7 @@ void building_free(building *b)
     free(b->name);
 }
 
-building *create_building(building_id id, struct region *r, char *name, building_t type)
+building *create_building(building_id id, struct region *r, char *name, index_t type)
 {
     building *b = malloc(sizeof(building));
     b->id = id;

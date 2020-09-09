@@ -33,13 +33,12 @@ static sqlite3_stmt *g_stmt_insert_region;
 static sqlite3_stmt *g_stmt_select_region;
 static sqlite3_stmt *g_stmt_select_all_regions_meta;
 
-static int db_log_error(sqlite3 *db, const char *fname) {
-    int err = sqlite3_extended_errcode(db);
-    fprintf(stderr, "%s: %s\n", fname, sqlite3_errmsg(db));
+static int db_log_error(sqlite3 *db, const char *fname, int err) {
+    fprintf(stderr, "error %d in %s: %s\n", err, fname, sqlite3_errmsg(db));
     return err;
 }
 
-#define DB_LOG_ERROR(db) db_log_error(db, __FUNCTION__)
+#define DB_LOG_ERROR(db) db_log_error((db), __FUNCTION__, sqlite3_extended_errcode(db))
 
 static int db_prepare(sqlite3 *db) {
     int err;
@@ -563,140 +562,58 @@ db_write_tuple_fail:
     return DB_LOG_ERROR(db);
 }
 
-static int db_write_terrain(struct sqlite3 *db, unsigned int id, const terrain *t)
-{
-    return db_write_tuple(db, g_stmt_insert_terrain, id, t->name);
-}
-
-static int db_write_ship_type(struct sqlite3 *db, unsigned int id, const ship_type *t)
-{
-    return db_write_tuple(db, g_stmt_insert_ship_type, id, t->name);
-}
-
-static int db_write_building_type(struct sqlite3 *db, unsigned int id, const building_type *t)
-{
-    return db_write_tuple(db, g_stmt_insert_building_type, id, t->name);
-}
-
-int db_write_terrains(struct sqlite3 *db, const struct terrains *list)
+static int db_write_config(struct sqlite3 *db, struct sqlite3_stmt *stmt, const config *cfg)
 {
     unsigned int i, len;
     int rc = SQLITE_OK;
-    for (i = 0, len = stbds_arrlenu(list->arr); i != len; ++i) {
-        terrain *t = list->arr + i;
-        int err = db_write_terrain(db, (terrain_id)i + 1, t);
+    for (i = 0, len = stbds_arrlenu(cfg->arr); i != len; ++i) {
+        config_data *t = cfg->arr + i;
+        int err = db_write_tuple(db, stmt, i, t->name);
         if (err != SQLITE_OK && rc == SQLITE_OK) {
-            /* return only the first error code */
+            /* keep trying, return the first error code */
             rc = err;
         }
     }
     return rc;
 }
 
-static db_write_building_types(struct sqlite3 *db, const building_types *types)
-{
-    /* TODO: DRY, extract db_write_tuples from db_write_terrains
-     * maybe ship_type, terrain, building_type should all be the same type?
-     */
-    assert(db);
-    assert(types);
-    return SQLITE_OK;
-}
-
-static int db_write_ship_types(struct sqlite3 *db, const ship_types *types)
-{
-    /* TODO: DRY, extract db_write_tuples from db_write_terrains */
-    assert(db);
-    assert(types);
-    return SQLITE_OK;
-}
-
-int db_read_tuples(struct sqlite3 *db, struct sqlite3_stmt *stmt, void(*callback)(int, const char *, void *), void *arg)
+int db_read_tuples(struct sqlite3 *db, struct sqlite3_stmt *stmt, config *cfg)
 {
     int err;
 
     err = sqlite3_reset(stmt);
-    if (err != SQLITE_OK) goto db_load_tuples_fail;
+    if (err != SQLITE_OK) goto db_read_tuples_fail;
     for (;;) {
         err = sqlite3_step(stmt);
         if (err == SQLITE_DONE) {
             return SQLITE_OK;
         }
         else if (err == SQLITE_ROW) {
-            int id = sqlite3_column_int(stmt, 0);
-            const char * str = (const char *)sqlite3_column_text(stmt, 1);
-            callback(id, str, arg);
+            unsigned int index = (unsigned int)sqlite3_column_int(stmt, 0);
+            const char * name = (const char *)sqlite3_column_text(stmt, 1);
+            config_data * t;
+
+            if (cfg->arr == NULL) {
+                cfg->arr = stbds_arraddnptr(cfg->arr, index);
+            }
+            t = config_get(cfg, index);
+            str_strlcpy(t->name, name, sizeof(t->name));
+            t->data = NULL;
+            assert(index >= 0);
+            assert(index < stbds_arrlenu(cfg->arr));
+            stbds_shput(cfg->hash_name, cfg->arr[index].name, index);
         }
-        else goto db_load_tuples_fail;
+        else goto db_read_tuples_fail;
     }
     return SQLITE_OK;
 
-db_load_tuples_fail:
+db_read_tuples_fail:
     return DB_LOG_ERROR(db);
 }
 
-static void cb_ship_type(int id, const char *name, void *arg) {
-    ship_types *list = (ship_types *)arg;
-    unsigned int index = (unsigned int)id - 1;
-    ship_type * t;
-
-    if (list->arr == NULL) {
-        unsigned int rows = 1 + index;
-        list->arr = stbds_arraddnptr(list->arr, rows);
-    }
-    t = st_get(list, id);
-    str_strlcpy(t->name, name, sizeof(t->name));
-    t->data = NULL;
-    assert(index >= 0);
-    assert(index < stbds_arrlenu(list->arr));
-    stbds_shput(list->hash_name, list->arr[index].name, id);
-}
-
-int db_read_ship_types(struct sqlite3 *db, ship_types *list)
+static int db_read_config(struct sqlite3 *db, struct sqlite3_stmt *select, config *cfg)
 {
-    return db_read_tuples(db, g_stmt_select_all_ship_types, cb_ship_type, (void *)list);
-}
-
-static void cb_building_type(int id, const char *name, void *arg) {
-    building_types *list = (building_types *)arg;
-    unsigned int index = (unsigned int)id - 1;
-    building_type * t;
-
-    if (list->arr == NULL) {
-        unsigned int rows = 1 + index;
-        list->arr = stbds_arraddnptr(list->arr, rows);
-    }
-    t = bt_get(list, id);
-    str_strlcpy(t->name, name, sizeof(t->name));
-    t->data = NULL;
-    assert(index >= 0);
-    assert(index < stbds_arrlenu(list->arr));
-    stbds_shput(list->hash_name, list->arr[index].name, id);
-}
-
-int db_read_building_types(struct sqlite3 *db, building_types *list)
-{
-    return db_read_tuples(db, g_stmt_select_all_building_types, cb_building_type, (void *)list);
-}
-
-static void cb_terrain(int id, const char *name, void *arg) {
-    terrains *list = (terrains *)arg;
-    unsigned int index = (unsigned int)id - 1;
-    terrain * t;
-
-    if (list->arr == NULL) {
-        unsigned int rows = 1 + index;
-        list->arr = stbds_arraddnptr(list->arr, rows);
-    }
-    t = terrains_get(list, id);
-    str_strlcpy(t->name, name, sizeof(t->name));
-    memset(&t->data, 0, sizeof(t->data));
-    terrains_update(list, id);
-}
-
-int db_read_terrains(struct sqlite3 *db, terrains *list)
-{
-    return db_read_tuples(db, g_stmt_select_all_terrains, cb_terrain, (void *)list);
+    return db_read_tuples(db, select, cfg);
 }
 
 /*
@@ -769,26 +686,28 @@ int db_execute(struct sqlite3 *db, const char *sql)
     return sqlite3_exec(db, sql, NULL, NULL, NULL);
 }
 
-int db_read_config(struct sqlite3 *db, struct gamedata *gd)
+int db_read_info(struct sqlite3 *db, struct gamedata *gd)
 {
     int err;
-    err = db_read_terrains(db, &gd->terrains);
+    err = db_read_config(db, g_stmt_select_all_terrains, &gd->terrains);
     if (err != SQLITE_OK) return err;
-    err = db_read_building_types(db, &gd->building_types);
+    err = db_read_config(db, g_stmt_select_all_building_types, 
+        &gd->building_types);
     if (err != SQLITE_OK) return err;
-    err = db_read_ship_types(db, &gd->ship_types);
+    err = db_read_config(db, g_stmt_select_all_ship_types, 
+        &gd->ship_types);
     if (err != SQLITE_OK) return err;
     return SQLITE_OK;
 }
 
-int db_write_config(struct sqlite3 *db, const struct gamedata *gd)
+int db_write_info(struct sqlite3 *db, const struct gamedata *gd)
 {
     int err;
-    err = db_write_terrains(db, &gd->terrains);
+    err = db_write_config(db, g_stmt_insert_terrain, &gd->terrains);
     if (err != SQLITE_OK) return err;
-    err = db_write_building_types(db, &gd->building_types);
+    err = db_write_config(db, g_stmt_insert_building_type, &gd->building_types);
     if (err != SQLITE_OK) return err;
-    err = db_write_ship_types(db, &gd->ship_types);
+    err = db_write_config(db, g_stmt_insert_ship_type, &gd->ship_types);
     if (err != SQLITE_OK) return err;
     return SQLITE_OK;
 }

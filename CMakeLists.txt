@@ -34,7 +34,6 @@ if (SQLITE3_FOUND)
     gamedata.c
     message.c
     region.c
-    terrain.c
     faction.c
     unit.c
     ship.c

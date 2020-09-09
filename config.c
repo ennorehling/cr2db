@@ -5,7 +5,6 @@
 #endif
 
 #include "config.h"
-#include "terrain.h"
 
 #include "stb_ds.h"
 
@@ -15,9 +14,9 @@
 #include <errno.h>
 #include <stdio.h>
 
-building_t bt_find(building_types *all, const char * name)
+index_t config_find(config *all, const char * name)
 {
-    struct building_type_index *index;
+    struct config_index *index;
     index = stbds_shgetp(all->hash_name, name);
     if (index) {
         return index->value;
@@ -25,52 +24,23 @@ building_t bt_find(building_types *all, const char * name)
     return -1;
 }
 
-building_t bt_add(building_types *all, const char * name)
+index_t config_add(config *cfg, const char * name)
 {
-    building_t index = (building_t)stbds_arraddnoff(all->arr, 1);
-    building_type *btype = bt_get(all, index);
+    index_t index = (index_t)stbds_arraddnoff(cfg->arr, 1);
+    config_data *c = config_get(cfg, index);
 
-    strncpy(btype->name, name, sizeof(btype->name));
-    btype->data = NULL;
+    strncpy(c->name, name, sizeof(c->name));
+    c->data = NULL;
     return index;
 }
 
-building_type *bt_get(building_types *all, building_t type)
+config_data *config_get(config *cfg, index_t type)
 {
     assert(type >= 0);
-    if (type >= stbds_arrlen(all->arr)) {
+    if (type >= stbds_arrlen(cfg->arr)) {
         return NULL;
     }
-    return all->arr + type;
-}
-
-ship_t st_find(ship_types *all, const char * name)
-{
-    struct ship_type_index *index;
-    index = stbds_shgetp(all->hash_name, name);
-    if (index) {
-        return index->value;
-    }
-    return -1;
-}
-
-ship_t st_add(ship_types *all, const char * name)
-{
-    ship_t index = (ship_t)stbds_arraddnoff(all->arr, 1);
-    ship_type *stype = st_get(all, index);
-
-    strncpy(stype->name, name, sizeof(stype->name));
-    stype->data = NULL;
-    return index;
-}
-
-ship_type *st_get(ship_types *all, ship_t type)
-{
-    assert(type >= 0);
-    if (type >= stbds_arrlen(all->arr)) {
-        return NULL;
-    }
-    return all->arr + type;
+    return cfg->arr + type;
 }
 
 static cJSON *load_json(FILE *F)
@@ -91,7 +61,7 @@ static cJSON *load_json(FILE *F)
     return config;
 }
 
-int config_load_terrains(struct terrains *types, const char * filename)
+int config_load(struct config *cfg, const char * filename)
 {
     FILE * F = fopen(filename, "rt");
     cJSON *json;
@@ -104,76 +74,31 @@ int config_load_terrains(struct terrains *types, const char * filename)
         cJSON **it;
         for (it = &json->child; *it;) {
             cJSON *child = *it;
-            terrain_id id = terrains_find(types, child->string);
-            terrain *t;
+            index_t id = config_find(cfg, child->string);
+            config_data *c;
             if (id == 0) {
-                id = terrains_add(types, child->string);
+                id = config_add(cfg, child->string);
             }
-            t = terrains_get(types, id);
-            if (t->data) {
-                cJSON_Delete(t->data);
+            c = config_get(cfg, id);
+            if (c->data) {
+                cJSON_Delete(c->data);
             }
-            t->data = child;
+            c->data = child;
             *it = child->next;
             child->next = NULL;
         }
         json->child = NULL;
         cJSON_Delete(json);
     }
-    (void)types;
     return fclose(F);
 }
 
-int config_load_buildings(struct building_types *types, const char * filename)
+void config_free(struct config *cfg)
 {
-    FILE * F = fopen(filename, "rt");
-    if (!F) {
-        return errno;
-    }
-    /* TODO: implement loading */
-    (void)types;
-    return fclose(F);
-}
-
-int config_load_ships(struct ship_types *types, const char * filename)
-{
-    FILE * F = fopen(filename, "rt");
-    if (!F) {
-        return errno;
-    }
-    /* TODO: implement loading */
-    (void)types;
-    return fclose(F);
-}
-
-void config_free_terrains(struct terrains *types)
-{
-    int i, len = stbds_arrlen(types->arr);
+    int i, len = stbds_arrlen(cfg->arr);
     for (i = 0; i != len; ++i) {
-        cJSON_Delete(types->arr[i].data);
+        cJSON_Delete(cfg->arr[i].data);
     }
-    stbds_arrfree(types->arr);
-    stbds_shfree(types->hash_name);
+    stbds_arrfree(cfg->arr);
+    stbds_shfree(cfg->hash_name);
 }
-
-void config_free_buildings(struct building_types *types)
-{
-    int i, len = stbds_arrlen(types->arr);
-    for (i = 0; i != len; ++i) {
-        cJSON_Delete(types->arr[i].data);
-    }
-    stbds_arrfree(types->arr);
-    stbds_shfree(types->hash_name);
-}
-
-void config_free_ships(struct ship_types *types)
-{
-    int i, len = stbds_arrlen(types->arr);
-    for (i = 0; i != len; ++i) {
-        cJSON_Delete(types->arr[i].data);
-    }
-    stbds_arrfree(types->arr);
-    stbds_shfree(types->hash_name);
-}
-
-

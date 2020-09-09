@@ -1,58 +1,29 @@
 #pragma once
 
 struct cJSON;
-struct terrains;
-struct building_type;
-struct building_types;
-struct ship_type;
-struct ship_types;
 
-typedef int building_t;
+typedef int index_t;
 typedef int ship_t;
 
-typedef struct building_type {
+typedef struct config_data {
     char name[32];
     struct cJSON *data;
-} building_type;
+} config_data;
 
-struct building_type_index {
+struct config_index {
     char *key;
-    building_t value;
+    index_t value;
 };
 
-typedef struct building_types {
-    struct building_type *arr;
-    struct building_type_index *hash_name;
-} building_types;
+typedef struct config {
+    struct config_data *arr;
+    struct config_index *hash_name;
+} config;
 
-building_t bt_find(building_types *all, const char * name);
-building_t bt_add(building_types *all, const char * name);
-building_type *bt_get(building_types *all, building_t type);
+index_t config_find(config *cfg, const char * name);
+index_t config_add(config *cfg, const char * name);
+config_data *config_get(config *cfg, index_t type);
 
-typedef struct ship_type {
-    char name[32];
-    struct cJSON *data;
-} ship_type;
-
-struct ship_type_index {
-    char *key;
-    ship_t value;
-};
-
-typedef struct ship_types {
-    struct ship_type *arr;
-    struct ship_type_index *hash_name;
-} ship_types;
-
-ship_t st_find(ship_types *all, const char * name);
-ship_t st_add(ship_types *all, const char * name);
-ship_type *st_get(ship_types *all, ship_t type);
-
-int config_load_terrains(struct terrains *types, const char * filename);
-int config_load_buildings(struct building_types *types, const char * filename);
-int config_load_ships(struct ship_types *types, const char * filename);
-
-void config_free_terrains(struct terrains *types);
-void config_free_buildings(struct building_types *types);
-void config_free_ships(struct ship_types *types);
+int config_load(struct config *cfg, const char * filename);
+void config_free(struct config *types);
 

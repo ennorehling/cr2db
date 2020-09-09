@@ -144,9 +144,9 @@ void gd_update_building(gamedata *gd, building *b, cJSON *data)
                 }
                 else if (child->type == cJSON_String) {
                     if (strcmp(child->string, "Typ") == 0) {
-                        b->type = bt_find(&gd->building_types, child->valuestring);
+                        b->type = config_find(&gd->building_types, child->valuestring);
                         if (b->type < 0) {
-                            b->type = bt_add(&gd->building_types, child->valuestring);
+                            b->type = config_add(&gd->building_types, child->valuestring);
                         }
                     }
                     else if (strcmp(child->string, "Name") == 0) {
@@ -195,9 +195,9 @@ void gd_update_ship(gamedata *gd, ship *obj, cJSON *data)
                 }
                 else if (child->type == cJSON_String) {
                     if (strcmp(child->string, "Typ") == 0) {
-                        obj->type = st_find(&gd->ship_types, child->valuestring);
+                        obj->type = config_find(&gd->ship_types, child->valuestring);
                         if (obj->type < 0) {
-                            obj->type = st_add(&gd->ship_types, child->valuestring);
+                            obj->type = config_add(&gd->ship_types, child->valuestring);
                         }
                     }
                     else if (strcmp(child->string, "Name") == 0) {
@@ -251,10 +251,10 @@ void gd_update_region(struct gamedata *gd, struct region *r, struct cJSON *data)
                     }
                     if (strcmp(child->string, "Terrain") == 0) {
                         const char *name = child->valuestring;
-                        r->terrain = terrains_find(&gd->terrains, name);
+                        r->terrain = config_find(&gd->terrains, name);
                         if (r->terrain == 0) {
                             /* special terrain, not in the config or database */
-                            r->terrain = terrains_add(&gd->terrains, name);
+                            r->terrain = config_add(&gd->terrains, name);
                         }
                     }
                 }
@@ -292,20 +292,20 @@ void region_reset(struct gamedata *gd, struct region *r)
 int gd_load_config(gamedata *gd)
 {
     int err, result = 0;
-    err = db_read_config(gd->db, gd);
+    err = db_read_info(gd->db, gd);
     if (err) return err;
-    err = config_load_terrains(&gd->terrains, "res/terrains.json");
+    err = config_load(&gd->terrains, "res/terrains.json");
     if (err && !result) result = err;
-    err = config_load_buildings(&gd->building_types, "res/buildings.json");
+    err = config_load(&gd->building_types, "res/buildings.json");
     if (err && !result) result = err;
-    err = config_load_ships(&gd->ship_types, "res/ships.json");
+    err = config_load(&gd->ship_types, "res/ships.json");
     if (err && !result) result = err;
     return result;
 }
 
 static int gd_save_config(const gamedata *gd)
 {
-    return db_write_config(gd->db, gd);
+    return db_write_info(gd->db, gd);
 }
 
 gamedata *game_create(struct sqlite3 *db)
@@ -378,7 +378,7 @@ static int cb_load_faction(faction *cursor, void *udata) {
 int game_load(gamedata *gd)
 {
     int err;
-    err = db_read_config(gd->db, gd);
+    err = db_read_info(gd->db, gd);
     if (err) return err;
     err = db_regions_walk(gd->db, cb_load_region, gd);
     if (err) return err;
@@ -388,8 +388,8 @@ int game_load(gamedata *gd)
 void game_free(gamedata *gd) {
     factions_free(&gd->factions);
     regions_free(&gd->regions);
-    config_free_buildings(&gd->building_types);
-    config_free_ships(&gd->ship_types);
-    config_free_terrains(&gd->terrains);
+    config_free(&gd->building_types);
+    config_free(&gd->ship_types);
+    config_free(&gd->terrains);
     gd->db = NULL;
 }

@@ -3,7 +3,6 @@
 #include "region.h"
 #include "faction.h"
 
-#include "terrain.h"
 #include "config.h"
 
 #include <stdbool.h>
@@ -27,9 +26,9 @@ typedef struct gamedata {
     struct regions regions;
     struct factions factions;
 
-    struct terrains terrains;
-    struct building_types building_types;
-    struct ship_types ship_types;
+    struct config terrains;
+    struct config building_types;
+    struct config ship_types;
 } gamedata;
 
 int factions_walk(struct gamedata *gd, int (*callback)(struct faction *, void *), void *arg);
