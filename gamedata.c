@@ -305,7 +305,7 @@ int gd_load_config(gamedata *gd)
 
 static int gd_save_config(const gamedata *gd)
 {
-    return db_write_terrains(gd->db, &gd->terrains);
+    return db_write_config(gd->db, gd);
 }
 
 gamedata *game_create(struct sqlite3 *db)

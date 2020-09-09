@@ -27,7 +27,6 @@ int db_write_config(struct sqlite3 *db, const struct gamedata *gd);
 
 int db_read_terrains(struct sqlite3 *db, struct terrains *list);
 int db_write_terrains(struct sqlite3 *db, const struct terrains *list);
-int db_write_terrain(struct sqlite3 *db, unsigned int id, const struct terrain *t);
 
 int db_write_faction(struct sqlite3 *db, const struct faction *f);
 int db_read_faction(struct sqlite3 *db, struct faction *f);

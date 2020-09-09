@@ -1,4 +1,7 @@
 -- sqlite
+PRAGMA foreign_keys = ON;
+PRAGMA user_version = 1;
+
 DROP TABLE IF EXISTS config;
 CREATE TABLE config (
     key TEXT NOT NULL PRIMARY KEY,
@@ -103,5 +106,3 @@ DROP INDEX IF EXISTS messages_region_id;
 CREATE INDEX messages_region_id ON messages (region_id);
 DROP INDEX IF EXISTS messages_faction_id;
 CREATE INDEX messages_faction_id ON messages (faction_id);
-
-PRAGMA user_version = 2;

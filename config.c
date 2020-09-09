@@ -57,10 +57,10 @@ ship_t st_find(ship_types *all, const char * name)
 ship_t st_add(ship_types *all, const char * name)
 {
     ship_t index = (ship_t)stbds_arraddnoff(all->arr, 1);
-    ship_type *btype = st_get(all, index);
+    ship_type *stype = st_get(all, index);
 
-    strncpy(btype->name, name, sizeof(btype->name));
-    btype->data = NULL;
+    strncpy(stype->name, name, sizeof(stype->name));
+    stype->data = NULL;
     return index;
 }
 
