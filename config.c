@@ -34,13 +34,13 @@ index_t config_add(config *cfg, const char * name)
     return index;
 }
 
-config_data *config_get(config *cfg, index_t type)
+config_data *config_get(config *cfg, index_t index)
 {
-    assert(type >= 0);
-    if (type >= stbds_arrlen(cfg->arr)) {
+    assert(index >= 0);
+    if (index >= stbds_arrlen(cfg->arr)) {
         return NULL;
     }
-    return cfg->arr + type;
+    return cfg->arr + index;
 }
 
 static cJSON *load_json(FILE *F)
@@ -76,7 +76,7 @@ int config_load(struct config *cfg, const char * filename)
             cJSON *child = *it;
             index_t id = config_find(cfg, child->string);
             config_data *c;
-            if (id == 0) {
+            if (id < 0) {
                 id = config_add(cfg, child->string);
             }
             c = config_get(cfg, id);

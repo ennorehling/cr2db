@@ -3,7 +3,6 @@
 struct cJSON;
 
 typedef int index_t;
-typedef int ship_t;
 
 typedef struct config_data {
     char name[32];
