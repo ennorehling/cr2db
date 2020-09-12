@@ -94,15 +94,24 @@ DROP TABLE IF EXISTS messages;
 CREATE TABLE messages (
     id INTEGER NOT NULL PRIMARY KEY,
     type INTEGER,
-    region_id INTEGER,
-    faction_id INTEGER,
-    text TEXT,
-    data BLOB,
-    FOREIGN KEY(region_id) REFERENCES regions(id)
-    FOREIGN KEY(faction_id) REFERENCES factions(id)
+    text TEXT NOT NULL
 );
 
 DROP INDEX IF EXISTS messages_region_id;
-CREATE INDEX messages_region_id ON messages (region_id);
 DROP INDEX IF EXISTS messages_faction_id;
-CREATE INDEX messages_faction_id ON messages (faction_id);
+
+DROP TABLE IF EXISTS region_message;
+CREATE TABLE region_message (
+    message_id INTEGER NOT NULL,
+    region_id INTEGER NOT NULL,
+    FOREIGN KEY(message_id) REFERENCES messages(id),
+    FOREIGN KEY(region_id) REFERENCES regions(id)
+);
+
+DROP TABLE IF EXISTS faction_message;
+CREATE TABLE faction_message (
+    message_id INTEGER NOT NULL,
+    faction_id INTEGER NOT NULL,
+    FOREIGN KEY(message_id) REFERENCES messages(id),
+    FOREIGN KEY(faction_id) REFERENCES factions(id)
+);

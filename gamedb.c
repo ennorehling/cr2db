@@ -8,6 +8,7 @@
 #include "gamedata.h"
 #include "faction.h"
 #include "region.h"
+#include "message.h"
 
 #include "stb_ds.h"
 
@@ -33,6 +34,10 @@ static sqlite3_stmt *g_stmt_insert_region;
 static sqlite3_stmt *g_stmt_select_region;
 static sqlite3_stmt *g_stmt_select_all_regions_meta;
 
+static sqlite3_stmt *g_stmt_insert_message;
+static sqlite3_stmt *g_stmt_insert_faction_message;
+static sqlite3_stmt *g_stmt_insert_region_message;
+
 static int db_log_error(sqlite3 *db, const char *fname, int err) {
     fprintf(stderr, "error %d in %s: %s\n", err, fname, sqlite3_errmsg(db));
     return err;
@@ -42,6 +47,23 @@ static int db_log_error(sqlite3 *db, const char *fname, int err) {
 
 static int db_prepare(sqlite3 *db) {
     int err;
+
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `messages` "
+        "(`id`,`type`,`text`) "
+        "VALUES (?,?,?)", -1, &g_stmt_insert_message, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `region_message` "
+        "(`message_id`, `region_id`) "
+        "VALUES (?,?)", -1, &g_stmt_insert_region_message, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `faction_message` "
+        "(`message_id`, `faction_id`) "
+        "VALUES (?,?)", -1, &g_stmt_insert_faction_message, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+
     err = sqlite3_prepare_v2(db,
         "SELECT `id`, `name` FROM `terrains` ORDER by `id` DESC", -1,
         &g_stmt_select_all_terrains, NULL);
@@ -120,6 +142,39 @@ static int db_bind_json(sqlite3_stmt *stmt, int index, cJSON *object) {
     return err;
 }
 
+int db_write_messages(sqlite3 *db, message *arr, sqlite3_int64 id, sqlite3_stmt *stmt) {
+    int err;
+    unsigned int i, len;
+
+    for (i = 0, len = stbds_arrlenu(arr); i != len; ++i) {
+        message * msg = arr + i;
+        err = sqlite3_reset(g_stmt_insert_message);
+        if (err != SQLITE_OK) goto db_write_message_fail;
+        err = sqlite3_bind_int64(g_stmt_insert_message, 1, (sqlite3_int64)msg->id);
+        if (err != SQLITE_OK) goto db_write_message_fail;
+        err = sqlite3_bind_int64(g_stmt_insert_message, 2, (sqlite3_int64)msg->type);
+        if (err != SQLITE_OK) goto db_write_message_fail;
+        err = sqlite3_bind_text(g_stmt_insert_message, 3, msg->text, -1, SQLITE_STATIC);
+        if (err != SQLITE_OK) goto db_write_message_fail;
+        err = sqlite3_step(g_stmt_insert_message);
+        if (err != SQLITE_DONE) goto db_write_message_fail;
+
+        err = sqlite3_reset(stmt);
+        if (err != SQLITE_OK) goto db_write_message_fail;
+        err = sqlite3_bind_int64(stmt, 1, msg->id);
+        if (err != SQLITE_OK) goto db_write_message_fail;
+        err = sqlite3_bind_int64(stmt, 2, id);
+        if (err != SQLITE_OK) goto db_write_message_fail;
+        err = sqlite3_step(stmt);
+        if (err != SQLITE_DONE) goto db_write_message_fail;
+    }
+
+    return SQLITE_OK;
+
+db_write_message_fail:
+    return DB_LOG_ERROR(db);
+}
+
 int db_write_faction(sqlite3 *db, const faction *f) {
     int err;
     err = sqlite3_reset(g_stmt_insert_faction);
@@ -135,6 +190,9 @@ int db_write_faction(sqlite3 *db, const faction *f) {
 
     err = sqlite3_step(g_stmt_insert_faction);
     if (err != SQLITE_DONE) goto db_write_faction_fail;
+    if (f->messages) {
+        return db_write_messages(db, f->messages, f->id, g_stmt_insert_faction_message);
+    }
     return SQLITE_OK;
 
 db_write_faction_fail:
@@ -285,6 +343,14 @@ db_open_fail:
 
 int db_close(sqlite3 * db) {
     int err;
+
+    err = sqlite3_finalize(g_stmt_insert_message);
+    g_stmt_insert_message = NULL;
+    err = sqlite3_finalize(g_stmt_insert_region_message);
+    g_stmt_insert_region_message = NULL;
+    err = sqlite3_finalize(g_stmt_insert_faction_message);
+    g_stmt_insert_faction_message = NULL;
+
     err = sqlite3_finalize(g_stmt_select_all_terrains);
     g_stmt_select_all_terrains = NULL;
     err = sqlite3_finalize(g_stmt_select_all_ship_types);
@@ -452,6 +518,10 @@ int db_write_region(struct sqlite3 *db, const struct region *r) {
 
     err = sqlite3_step(g_stmt_insert_region);
     if (err != SQLITE_DONE) goto db_write_region_fail;
+
+    if (r->messages) {
+        return db_write_messages(db, r->messages, r->id, g_stmt_insert_region_message);
+    }
     return SQLITE_OK;
 
 db_write_region_fail:
