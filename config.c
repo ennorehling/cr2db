@@ -16,9 +16,9 @@
 
 index_t config_find(config *all, const char * name)
 {
-    struct config_index *index;
-    index = stbds_shgetp_null(all->hash_name, name);
-    if (index) {
+    ptrdiff_t i = stbds_shgeti(all->hash_name, name);
+    if (i >= 0) {
+        struct config_index *index = all->hash_name + i;
         return index->value;
     }
     return -1;
