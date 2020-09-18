@@ -164,8 +164,10 @@ static int db_write_battles(sqlite3 *db, battle *arr, sqlite3_int64 id) {
         if (err != SQLITE_OK) goto db_write_battle_fail;
         err = sqlite3_bind_int64(g_stmt_insert_battle, 4, b->loc.z);
         if (err != SQLITE_OK) goto db_write_battle_fail;
-        err = sqlite3_bind_text(g_stmt_insert_faction, 5, b->report, -1, SQLITE_STATIC);
+        err = sqlite3_bind_text(g_stmt_insert_battle, 5, b->report, -1, SQLITE_STATIC);
         if (err != SQLITE_OK) goto db_write_battle_fail;
+        err = sqlite3_step(g_stmt_insert_battle);
+        if (err != SQLITE_DONE) goto db_write_battle_fail;
     }
     return SQLITE_OK;
 
@@ -224,7 +226,7 @@ int db_write_faction(sqlite3 *db, const faction *f) {
     if (err != SQLITE_DONE) goto db_write_faction_fail;
     if (f->messages) {
         err = db_write_messages(db, f->messages, f->id, g_stmt_insert_faction_message);
-        if (err != SQLITE_DONE) goto db_write_faction_fail;
+        if (err != SQLITE_OK) goto db_write_faction_fail;
     }
     if (f->battles) {
         return db_write_battles(db, f->battles, f->id);
