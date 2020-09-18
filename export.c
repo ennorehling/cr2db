@@ -15,6 +15,8 @@
 
 #include <assert.h>
 
+#define CR_VERSION 67
+
 static void json_to_cr(cJSON *json, FILE *F);
 
 static void cr_strings(cJSON *json, FILE *F)
@@ -159,6 +161,27 @@ static void cr_messages(FILE * F, message *list) {
     }
 }
 
+static void cr_text(FILE *F, const char *text) {
+    const char *tok = text;
+    while (tok && *tok) {
+        const char *pos = strchr(tok, '\n');
+        if (pos > tok) {
+            fputc('"', F);
+            // TODO: escaping?
+            fwrite(tok, 1, tok - pos, F);
+            fputs("\"\n", F);
+            tok = pos + 1;
+        }
+        else {
+            fputc('"', F);
+            // TODO: escaping?
+            fputs(tok, F);
+            fputs("\"\n", F);
+            break;
+        }
+    }
+}
+
 static void cr_battles(FILE *F, battle *list) {
     int i, len = stbds_arrlen(list);
     for (i = 0; i != len; ++i) {
@@ -169,32 +192,15 @@ static void cr_battles(FILE *F, battle *list) {
         else {
             fprintf(F, "BATTLE %d %d\n", b->loc.x, b->loc.y);
         }
-        cr_messages(F, b->messages);
+        cr_text(F, b->report);
     }
 }
 
 static int cr_orders(FILE *F, const char *orders)
 {
     if (orders && *orders) {
-        const char *tok = orders;
         fputs("COMMANDS\n", F);
-        while (tok && *tok) {
-            const char *pos = strchr(tok, '\n');
-            if (pos > tok) {
-                fputc('"', F);
-                // TODO: escaping?
-                fwrite(tok, 1, tok - pos, F);
-                fputs("\"\n", F);
-                tok = pos + 1;
-            }
-            else {
-                fputc('"', F);
-                // TODO: escaping?
-                fputs(tok, F);
-                fputs("\"\n", F);
-                break;
-            }
-        }
+        cr_text(F, orders);
     }
     return 0;
 }
@@ -255,7 +261,7 @@ static int cb_region(region *r, void *arg)
 static void cr_header(struct gamedata *gd, FILE *F)
 {
     assert(gd);
-    fprintf(F, "VERSION 66\n36;Basis\n\"UTF-8\";charset\n%d;Runde\n", gd->turn);
+    fprintf(F, "VERSION %d\n36;Basis\n\"UTF-8\";charset\n%d;Runde\n", CR_VERSION, gd->turn);
 }
 
 int export_db(struct gamedata *gd, FILE *F)

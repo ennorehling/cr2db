@@ -26,7 +26,7 @@ void faction_free(faction *f)
     f->messages = NULL;
     for (i = 0, len = stbds_arrlen(f->battles); i != len; ++i) {
         struct battle *b = f->battles + i;
-        message_arrfree(b->messages);
+        stbds_arrfree(b->report);
     }
     stbds_arrfree(f->battles);
     cJSON_Delete(f->data);

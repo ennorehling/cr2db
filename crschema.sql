@@ -100,18 +100,29 @@ CREATE TABLE messages (
 DROP INDEX IF EXISTS messages_region_id;
 DROP INDEX IF EXISTS messages_faction_id;
 
-DROP TABLE IF EXISTS region_message;
-CREATE TABLE region_message (
+DROP TABLE IF EXISTS region_messages;
+CREATE TABLE region_messages (
     message_id INTEGER NOT NULL,
     region_id INTEGER NOT NULL,
     FOREIGN KEY(message_id) REFERENCES messages(id),
     FOREIGN KEY(region_id) REFERENCES regions(id)
 );
 
-DROP TABLE IF EXISTS faction_message;
-CREATE TABLE faction_message (
+DROP TABLE IF EXISTS faction_messages;
+CREATE TABLE faction_messages (
     message_id INTEGER NOT NULL,
     faction_id INTEGER NOT NULL,
     FOREIGN KEY(message_id) REFERENCES messages(id),
     FOREIGN KEY(faction_id) REFERENCES factions(id)
+);
+
+DROP TABLE IF EXISTS battles;
+CREATE TABLE battles (
+    faction_id INTEGER NOT NULL,
+    x INTEGER NOT NULL,
+    y INTEGER NOT NULL,
+    z INTEGER NOT NULL,
+    report TEXT NOT NULL,
+    FOREIGN KEY(faction_id) REFERENCES factions(id)
+    PRIMARY KEY (faction_id, x, y, z)
 );

@@ -17,7 +17,7 @@ struct message;
 
 typedef struct battle {
     region_xyz loc;
-    struct message *messages; /* stb_arr */
+    char *report; /* stb_arr(char) */
 } battle;
 
 typedef struct gamedata {

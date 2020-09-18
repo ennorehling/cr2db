@@ -114,10 +114,7 @@ static enum block_type block_type(parser_t *p, const char *name, int key, const 
 }
 
 static void gd_update(parser_t *p) {
-    if (p->text) {
-        p->text = NULL;
-    }
-    else if (p->root) {
+    if (p->root) {
         if (p->faction) {
             gd_update_faction(p->gd, p->faction, p->root);
             gd_add_faction(p->gd, p->faction);
@@ -140,7 +137,6 @@ static void gd_update(parser_t *p) {
             gd_add_region(p->gd, p->region);
             p->root = NULL;
         }
-        p->battle = NULL;
     }
     /* preserve current region and faction, but these objects have no sub-objects: */
     p->messages = NULL;
@@ -253,6 +249,7 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
             faction *f = calloc(1, sizeof(faction));
             f->id = keyv[0];
             p->faction = f;
+            p->battle = NULL;
             p->root = block = cJSON_CreateObject();
             /* pop the entire stack, and start over: */
             p->stack_top = 0;
@@ -276,11 +273,8 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
             p->stack_top = 1; /* only REGOIN is below this on the stack */
             stack_push(p, block, name_ship);
         }
-        else if (strcmp("MESSAGE", name) == 0) {
-            if (p->battle) {
-                p->messages = &p->battle->messages;
-            }
-            else if (p->faction) {
+        else if (!p->battle && strcmp("MESSAGE", name) == 0) {
+            if (p->faction) {
                 p->messages = &p->faction->messages;
             }
             else if (p->region) {
@@ -312,6 +306,8 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
             r->loc.z = (keyc > 2) ? keyv[2] : 0;
             p->region = r;
             p->faction = NULL;
+            p->text = NULL;
+            p->battle = NULL;
             p->root = block = cJSON_CreateObject();
             p->stack_top = 0;
             stack_push(p, block, name_region);
@@ -319,7 +315,8 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
         else if (strcmp("BATTLE", name) == 0) {
             battle *b = stbds_arraddnptr(p->faction->battles, 1);
             p->battle = b;
-            b->messages = NULL;
+            p->text = &b->report;
+            b->report = NULL;
             b->loc.x = keyv[0];
             b->loc.y = keyv[1];
             b->loc.z = (keyc > 2) ? keyv[2] : 0;
@@ -369,6 +366,19 @@ static enum CR_Error handle_element(void *udata, const char *name, unsigned int 
     return handle_object(p, name, keyc, keyv);
 }
 
+static void append_text(char **ptext, const char *value) {
+    char *text = *ptext;
+    size_t len = strlen(value);
+    char *tail;
+    if (text != NULL) {
+        /* replace nul-terminator with newline */
+        stbds_arrlast(text) = '\n';
+    }
+    tail = stbds_arraddnptr(text, (int)len + 1);
+    memcpy(tail, value, len + 1);
+    *ptext = text;
+}
+
 static enum CR_Error handle_string(void *udata, const char *name, const char *value) {
     parser_t *p = (parser_t *)udata;
 
@@ -387,17 +397,8 @@ static enum CR_Error handle_string(void *udata, const char *name, const char *va
         }
     }
     else if (p->text) {
-        char *text = *p->text;
         if (strcmp("rendered", name) == 0) {
-            size_t len = strlen(value);
-            char *tail;
-            if (text  != NULL) {
-                /* replace nul-terminator with newline */
-                stbds_arrlast(text) = '\n';
-            }
-            tail = stbds_arraddnptr(text, (int) len + 1);
-            memcpy(tail, value, len + 1);
-            *p->text = text;
+            append_text(p->text, value);
         }
     }
     else if (p->current && p->current->type == cJSON_Object) {
@@ -460,6 +461,10 @@ static enum CR_Error handle_number(void *udata, const char *name, long value) {
 static enum CR_Error handle_text(void *udata, const char *text) {
     parser_t *p = (parser_t *)udata;
 
+    if (p->text) {
+        append_text(p->text, text);
+        return CR_ERROR_NONE;
+    }
     if (p->current && p->current->type == cJSON_Array) {
         cJSON_AddItemToArray(p->current, cJSON_CreateString(text));
         return CR_ERROR_NONE;

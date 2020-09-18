@@ -35,6 +35,7 @@ static sqlite3_stmt *g_stmt_select_region;
 static sqlite3_stmt *g_stmt_select_all_regions_meta;
 
 static sqlite3_stmt *g_stmt_insert_message;
+static sqlite3_stmt *g_stmt_insert_battle;
 static sqlite3_stmt *g_stmt_insert_faction_message;
 static sqlite3_stmt *g_stmt_insert_region_message;
 
@@ -54,14 +55,19 @@ static int db_prepare(sqlite3 *db) {
         "VALUES (?,?,?)", -1, &g_stmt_insert_message, NULL);
     if (err != SQLITE_OK) goto db_prepare_fail;
     err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `region_message` "
+        "INSERT OR REPLACE INTO `region_messages` "
         "(`message_id`, `region_id`) "
         "VALUES (?,?)", -1, &g_stmt_insert_region_message, NULL);
     if (err != SQLITE_OK) goto db_prepare_fail;
     err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `faction_message` "
+        "INSERT OR REPLACE INTO `faction_messages` "
         "(`message_id`, `faction_id`) "
         "VALUES (?,?)", -1, &g_stmt_insert_faction_message, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `battles` "
+        "(`faction_id`, `x`, `y`, `z`, `report`) "
+        "VALUES (?,?,?,?,?)", -1, &g_stmt_insert_battle, NULL);
     if (err != SQLITE_OK) goto db_prepare_fail;
 
     err = sqlite3_prepare_v2(db,
@@ -142,7 +148,33 @@ static int db_bind_json(sqlite3_stmt *stmt, int index, cJSON *object) {
     return err;
 }
 
-int db_write_messages(sqlite3 *db, message *arr, sqlite3_int64 id, sqlite3_stmt *stmt) {
+static int db_write_battles(sqlite3 *db, battle *arr, sqlite3_int64 id) {
+    int err;
+    unsigned int i, len;
+
+    for (i = 0, len = stbds_arrlenu(arr); i != len; ++i) {
+        battle *b = arr + i;
+        err = sqlite3_reset(g_stmt_insert_battle);
+        if (err != SQLITE_OK) goto db_write_battle_fail;
+        err = sqlite3_bind_int64(g_stmt_insert_battle, 1, id);
+        if (err != SQLITE_OK) goto db_write_battle_fail;
+        err = sqlite3_bind_int64(g_stmt_insert_battle, 2, b->loc.x);
+        if (err != SQLITE_OK) goto db_write_battle_fail;
+        err = sqlite3_bind_int64(g_stmt_insert_battle, 3, b->loc.y);
+        if (err != SQLITE_OK) goto db_write_battle_fail;
+        err = sqlite3_bind_int64(g_stmt_insert_battle, 4, b->loc.z);
+        if (err != SQLITE_OK) goto db_write_battle_fail;
+        err = sqlite3_bind_text(g_stmt_insert_faction, 5, b->report, -1, SQLITE_STATIC);
+        if (err != SQLITE_OK) goto db_write_battle_fail;
+    }
+    return SQLITE_OK;
+
+db_write_battle_fail:
+    return DB_LOG_ERROR(db);
+}
+
+
+static int db_write_messages(sqlite3 *db, message *arr, sqlite3_int64 id, sqlite3_stmt *stmt) {
     int err;
     unsigned int i, len;
 
@@ -191,7 +223,11 @@ int db_write_faction(sqlite3 *db, const faction *f) {
     err = sqlite3_step(g_stmt_insert_faction);
     if (err != SQLITE_DONE) goto db_write_faction_fail;
     if (f->messages) {
-        return db_write_messages(db, f->messages, f->id, g_stmt_insert_faction_message);
+        err = db_write_messages(db, f->messages, f->id, g_stmt_insert_faction_message);
+        if (err != SQLITE_DONE) goto db_write_faction_fail;
+    }
+    if (f->battles) {
+        return db_write_battles(db, f->battles, f->id);
     }
     return SQLITE_OK;
 
@@ -298,10 +334,7 @@ db_install_fail:
 }
 
 static int db_upgrade(sqlite3 *db, int from_version, int to_version) {
-    if (from_version != to_version) {
-        return db_install(db, "crschema.sql");
-    }
-    return 0;
+    return db_install(db, "crschema.sql");
 }
 
 static int cb_int_col(void *data, int ncols, char **text, char **name) {
@@ -325,7 +358,7 @@ int db_open(const char * filename, sqlite3 **dbp, int version) {
     if (err != SQLITE_OK) goto db_open_fail;
     err = sqlite3_exec(db, "PRAGMA user_version", cb_int_col, &user_version, NULL);
     if (err != SQLITE_OK) goto db_open_fail;
-    if (user_version != version) {
+    if (user_version <= version) {
         err = db_upgrade(db, user_version, version);
     }
     if (err != SQLITE_OK) goto db_open_fail;
@@ -348,6 +381,8 @@ int db_close(sqlite3 * db) {
     g_stmt_insert_message = NULL;
     err = sqlite3_finalize(g_stmt_insert_region_message);
     g_stmt_insert_region_message = NULL;
+    err = sqlite3_finalize(g_stmt_insert_battle);
+    g_stmt_insert_battle = NULL;
     err = sqlite3_finalize(g_stmt_insert_faction_message);
     g_stmt_insert_faction_message = NULL;
 
