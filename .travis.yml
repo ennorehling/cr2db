@@ -2,11 +2,14 @@ sudo: false
 language: c
 stages: 
   - check
+  - build
   - test
 jobs:
   include:
     - stage: check
       script: s/cppcheck
+    - stage: build
+      script: s/build
   exclude:
     - os: osx
       stage: check
@@ -14,7 +17,6 @@ compiler:
   - gcc
   - clang
 script:
-  - s/build
   - build/atl-cli
 addons:
   apt:
