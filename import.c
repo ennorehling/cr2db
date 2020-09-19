@@ -132,6 +132,12 @@ static void gd_update(parser_t *p) {
             gd_add_ship(p->gd, p->ship);
             p->root = NULL;
         }
+        else if (p->unit) {
+            p->unit->region = p->region;
+            gd_update_unit(p->gd, p->unit, p->root);
+            gd_add_unit(p->gd, p->unit);
+            p->root = NULL;
+        }
         else if (p->region) {
             gd_update_region(p->gd, p->region, p->root);
             gd_add_region(p->gd, p->region);
@@ -245,6 +251,7 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
         static const char *name_faction = "PARTEI";
         static const char *name_building = "BURG";
         static const char *name_ship = "SCHIFF";
+        static const char *name_unit = "EINHEIT";
         if (strcmp(name_faction, name) == 0) {
             faction *f = calloc(1, sizeof(faction));
             f->id = keyv[0];
@@ -261,7 +268,7 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
             b->region = p->region;
             p->building = b;
             p->root = block = cJSON_CreateObject();
-            p->stack_top = 1; /* only REGOIN is below this on the stack */
+            p->stack_top = 1; /* only the region is below this on the stack */
             stack_push(p, block, name_building);
         }
         else if (strcmp(name_ship, name) == 0) {
@@ -270,8 +277,17 @@ static enum CR_Error handle_block(parser_t *p, const char * name, int keyc, int 
             b->region = p->region;
             p->ship = b;
             p->root = block = cJSON_CreateObject();
-            p->stack_top = 1; /* only REGOIN is below this on the stack */
+            p->stack_top = 1; /* only the region is below this on the stack */
             stack_push(p, block, name_ship);
+        }
+        else if (strcmp(name_unit, name) == 0) {
+            unit *u = calloc(1, sizeof(unit));
+            u->id = keyv[0];
+            u->region = p->region;
+            p->unit = u;
+            p->root = block = cJSON_CreateObject();
+            p->stack_top = 1; /* only the region is below this on the stack */
+            stack_push(p, block, name_unit);
         }
         else if (!p->battle && strcmp("MESSAGE", name) == 0) {
             if (p->faction) {

@@ -26,6 +26,7 @@ typedef struct gamedata {
     struct regions regions;
     struct factions factions;
 
+    struct config races;
     struct config terrains;
     struct config building_types;
     struct config ship_types;
@@ -54,6 +55,10 @@ void region_reset(struct gamedata *gd, struct region *r);
 struct ship *gd_create_ship(struct gamedata *gd, struct region *r, struct cJSON *data);
 void gd_update_ship(struct gamedata *gd, struct ship *b, struct cJSON *data);
 void gd_add_ship(struct gamedata *gd, struct ship *b);
+
+struct unit *gd_create_unit(struct gamedata *gd, struct region *r, struct cJSON *data);
+void gd_update_unit(struct gamedata *gd, struct unit *b, struct cJSON *data);
+void gd_add_unit(struct gamedata *gd, struct unit *b);
 
 struct building *gd_create_building(struct gamedata *gd, struct region *r, struct cJSON *data);
 void gd_update_building(struct gamedata *gd, struct building *b, struct cJSON *data);

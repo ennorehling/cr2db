@@ -211,6 +211,60 @@ void gd_update_ship(gamedata *gd, ship *obj, cJSON *data)
     }
 }
 
+void gd_add_unit(gamedata *gd, unit *obj)
+{
+    assert(gd);
+    assert(obj);
+    assert(obj->region);
+    stbds_arrpush(obj->region->units, obj);
+}
+
+unit *gd_create_unit(gamedata *gd, region *r, cJSON *data)
+{
+    unit * obj = calloc(1, sizeof(unit));
+    assert(gd);
+    assert(r);
+    obj->region = r;
+    gd_update_unit(gd, obj, data);
+    gd_add_unit(gd, obj);
+    return obj;
+}
+
+void gd_update_unit(gamedata *gd, unit *obj, cJSON *data)
+{
+    assert(gd);
+    assert(obj);
+    if (obj->data != data) {
+        if (data) {
+            cJSON * child;
+            for (child = data->child; child != NULL; child = child->next) {
+                if (obj->id == 0 && child->type == cJSON_Number) {
+                    if (strcmp(child->string, "id") == 0) {
+                        obj->id = child->valueint;
+                    }
+                    if (strcmp(child->string, "Partei") == 0) {
+                        obj->faction = factions_get(&gd->factions, child->valueint);
+                    }
+                }
+                else if (child->type == cJSON_String) {
+                    if (strcmp(child->string, "Typ") == 0) {
+                        index_t i = config_find(&gd->races, child->valuestring);
+                        if (i < 0) {
+                            i = config_add(&gd->races, child->valuestring);
+                        }
+                        obj->race = (race_t)i;
+                    }
+                    else if (strcmp(child->string, "Name") == 0) {
+                        obj->name = str_strdup(child->valuestring);
+                    }
+                }
+            }
+        }
+        cJSON_Delete(obj->data);
+        obj->data = data;
+    }
+}
+
 void gd_add_region(gamedata *gd, region *r)
 {
     regions_add(&gd->regions, r);
@@ -295,6 +349,8 @@ int gd_load_config(gamedata *gd)
     int err, result = 0;
     err = db_read_info(gd->db, gd);
     if (err) return err;
+    err = config_load(&gd->races, "res/races.json");
+    if (err && !result) result = err;
     err = config_load(&gd->terrains, "res/terrains.json");
     if (err && !result) result = err;
     err = config_load(&gd->building_types, "res/buildings.json");

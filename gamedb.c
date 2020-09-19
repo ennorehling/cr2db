@@ -8,6 +8,9 @@
 #include "gamedata.h"
 #include "faction.h"
 #include "region.h"
+#include "unit.h"
+#include "ship.h"
+#include "building.h"
 #include "message.h"
 
 #include "stb_ds.h"
@@ -21,14 +24,22 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+static sqlite3_stmt *g_stmt_select_all_races;
 static sqlite3_stmt *g_stmt_select_all_terrains;
 static sqlite3_stmt *g_stmt_select_all_ship_types;
 static sqlite3_stmt *g_stmt_select_all_building_types;
+static sqlite3_stmt *g_stmt_insert_race;
 static sqlite3_stmt *g_stmt_insert_terrain;
 static sqlite3_stmt *g_stmt_insert_building_type;
 static sqlite3_stmt *g_stmt_insert_ship_type;
 static sqlite3_stmt *g_stmt_insert_faction;
+static sqlite3_stmt *g_stmt_insert_building;
+static sqlite3_stmt *g_stmt_insert_ship;
+static sqlite3_stmt *g_stmt_insert_unit;
 static sqlite3_stmt *g_stmt_select_faction;
+static sqlite3_stmt *g_stmt_select_building;
+static sqlite3_stmt *g_stmt_select_ship;
+static sqlite3_stmt *g_stmt_select_unit;
 static sqlite3_stmt *g_stmt_select_all_factions_meta;
 static sqlite3_stmt *g_stmt_insert_region;
 static sqlite3_stmt *g_stmt_select_region;
@@ -81,6 +92,16 @@ static int db_prepare(sqlite3 *db) {
     if (err != SQLITE_OK) goto db_prepare_fail;
 
     err = sqlite3_prepare_v2(db,
+        "SELECT `id`, `name` FROM `races` ORDER by `id` DESC", -1,
+        &g_stmt_select_all_races, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `races` "
+        "(`id`, `name`) "
+        "VALUES (?,?)", -1, &g_stmt_insert_race, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+
+    err = sqlite3_prepare_v2(db,
         "SELECT `id`, `name` FROM `ship_types` ORDER by `id` DESC", -1,
         &g_stmt_select_all_ship_types, NULL);
     if (err != SQLITE_OK) goto db_prepare_fail;
@@ -112,6 +133,36 @@ static int db_prepare(sqlite3 *db) {
     err = sqlite3_prepare_v2(db,
         "SELECT `id`, `name`, `email` FROM `factions`", -1,
         &g_stmt_select_all_factions_meta, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `buildings` "
+        "(`id`, `region_id`, `type`, `name`, `data`) "
+        "VALUES (?,?,?,?,?)", -1, &g_stmt_insert_building, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+    err = sqlite3_prepare_v2(db,
+        "SELECT `region_id`, `type`, `name`, `data` "
+        "FROM `buildings` WHERE `id` = ?", -1, &g_stmt_select_building, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `ships` "
+        "(`id`, `region_id`, `type`, `name`, `data`) "
+        "VALUES (?,?,?,?,?)", -1, &g_stmt_insert_ship, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+    err = sqlite3_prepare_v2(db,
+        "SELECT `region_id`, `type`, `name`, `data`"
+        "FROM `ships` WHERE `id` = ?", -1, &g_stmt_select_ship, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+
+    err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `units` "
+        "(`id`, `region_id`, `faction_id`, `race`, `data`, `name`, `orders`) "
+        "VALUES (?,?,?,?,?,?,?)", -1, &g_stmt_insert_unit, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+    err = sqlite3_prepare_v2(db,
+        "SELECT `region_id`, `faction_id`, `data`, `name`, `race`, `orders` "
+        "FROM `units` WHERE `id` = ?", -1, &g_stmt_select_unit, NULL);
     if (err != SQLITE_OK) goto db_prepare_fail;
 
     err = sqlite3_prepare_v2(db,
@@ -388,12 +439,16 @@ int db_close(sqlite3 * db) {
     err = sqlite3_finalize(g_stmt_insert_faction_message);
     g_stmt_insert_faction_message = NULL;
 
+    err = sqlite3_finalize(g_stmt_select_all_races);
+    g_stmt_select_all_races = NULL;
     err = sqlite3_finalize(g_stmt_select_all_terrains);
     g_stmt_select_all_terrains = NULL;
     err = sqlite3_finalize(g_stmt_select_all_ship_types);
     g_stmt_select_all_ship_types = NULL;
     err = sqlite3_finalize(g_stmt_select_all_building_types);
     g_stmt_select_all_building_types = NULL;
+    err = sqlite3_finalize(g_stmt_insert_race);
+    g_stmt_insert_race = NULL;
     err = sqlite3_finalize(g_stmt_insert_terrain);
     g_stmt_insert_terrain = NULL;
     err = sqlite3_finalize(g_stmt_insert_ship_type);
@@ -413,120 +468,135 @@ int db_close(sqlite3 * db) {
     g_stmt_insert_region = NULL;
     err = sqlite3_finalize(g_stmt_select_region);
     g_stmt_select_region = NULL;
-/*
     err = sqlite3_finalize(g_stmt_insert_unit);
     g_stmt_insert_unit = NULL;
     err = sqlite3_finalize(g_stmt_insert_ship);
     g_stmt_insert_ship = NULL;
     err = sqlite3_finalize(g_stmt_insert_building);
     g_stmt_insert_building = NULL;
-*/
+
     err = sqlite3_close(db);
     return err;
 }
 
-/*
 int db_write_unit(struct sqlite3 *db, const struct unit *u) {
-    // INSERT INTO `unit` (`id`, `data`, `name`, `orders`, `region_id`, `faction_id`) VALUES (?,?,?,?,?,?)
+/*
+        "INSERT OR REPLACE INTO `units` "
+        "(`id`, `region_id`, `faction_id`, `race`, `name`, `orders`, `data`) "
+*/
     int err;
-    assert(u);
-    err = sqlite3_reset(g_stmt_insert_unit);
-    if (err != SQLITE_OK) goto db_write_unit_fail;
+
     err = sqlite3_bind_int(g_stmt_insert_unit, 1, u->id);
     if (err != SQLITE_OK) goto db_write_unit_fail;
-    err = db_bind_json(g_stmt_insert_unit, 2, u->data);
-    if (err != SQLITE_OK) goto db_write_unit_fail;
-    err = sqlite3_bind_text(g_stmt_insert_unit, 3, u->name, -1, SQLITE_STATIC);
-    if (err != SQLITE_OK) goto db_write_unit_fail;
-    if (u->orders) {
-        err = sqlite3_bind_text(g_stmt_insert_unit, 4, u->orders, -1, SQLITE_STATIC);
-        if (err != SQLITE_OK) goto db_write_unit_fail;
+    /* caller must bind region_id */
+    if (u->faction) {
+        err = sqlite3_bind_int(g_stmt_insert_unit, 3, u->faction->id);
     }
     else {
-        err = sqlite3_bind_null(g_stmt_insert_unit, 4);
-        if (err != SQLITE_OK) goto db_write_unit_fail;
+        err = sqlite3_bind_null(g_stmt_insert_unit, 3);
     }
-    if (u->region) {
-        err = sqlite3_bind_int(g_stmt_insert_unit, 5, u->region->id);
-        if (err != SQLITE_OK) goto db_write_unit_fail;
+    if (err != SQLITE_OK) goto db_write_unit_fail;
+    err = sqlite3_bind_int(g_stmt_insert_unit, 4, u->race);
+    if (err != SQLITE_OK) goto db_write_unit_fail;
+
+    if (u->name) {
+        err = sqlite3_bind_text(g_stmt_insert_unit, 5, u->name, -1, SQLITE_STATIC);
     }
     else {
         err = sqlite3_bind_null(g_stmt_insert_unit, 5);
-        if (err != SQLITE_OK) goto db_write_unit_fail;
     }
-    if (u->faction) {
-        err = sqlite3_bind_int(g_stmt_insert_unit, 6, u->faction->id);
-        if (err != SQLITE_OK) goto db_write_unit_fail;
+    if (err != SQLITE_OK) goto db_write_unit_fail;
+    if (u->orders) {
+        err = sqlite3_bind_text(g_stmt_insert_unit, 6, u->orders, -1, SQLITE_STATIC);
     }
     else {
         err = sqlite3_bind_null(g_stmt_insert_unit, 6);
-        if (err != SQLITE_OK) goto db_write_unit_fail;
     }
+    if (err != SQLITE_OK) goto db_write_unit_fail;
+
+    err = db_bind_json(g_stmt_insert_unit, 5, u->data);
+    if (err != SQLITE_OK) goto db_write_unit_fail;
 
     err = sqlite3_step(g_stmt_insert_unit);
-    if (err == SQLITE_DONE) {
-        return SQLITE_OK;
-    }
+    if (err != SQLITE_DONE) goto db_write_unit_fail;
+    err = sqlite3_reset(g_stmt_insert_unit);
+    if (err != SQLITE_OK) goto db_write_unit_fail;
+
+    return SQLITE_OK;
+
 db_write_unit_fail:
-    err = DB_LOG_ERROR(db);
+    return DB_LOG_ERROR(db);
 }
 
-int db_write_ship(struct sqlite3 *db, const struct ship *sh) {
+int db_write_ship(struct sqlite3 *db, const struct ship *s) {
+/*
+        "INSERT OR REPLACE INTO `ships` "
+        "(`id`, `region_id`, `type`, `name`, `data`) "
+*/
     int err;
-    assert(sh);
-    err = sqlite3_reset(g_stmt_insert_ship);
+
+    err = sqlite3_bind_int(g_stmt_insert_ship, 1, s->id);
     if (err != SQLITE_OK) goto db_write_ship_fail;
-    err = sqlite3_bind_int(g_stmt_insert_ship, 1, sh->id);
+    /* caller must bind region_id */
+    err = sqlite3_bind_int(g_stmt_insert_ship, 3, s->type);
     if (err != SQLITE_OK) goto db_write_ship_fail;
-    err = db_bind_json(g_stmt_insert_ship, 2, sh->data);
-    if (err != SQLITE_OK) goto db_write_ship_fail;
-    err = sqlite3_bind_text(g_stmt_insert_ship, 3, sh->name, -1, SQLITE_STATIC);
-    if (err != SQLITE_OK) goto db_write_ship_fail;
-    if (sh->region) {
-        err = sqlite3_bind_int(g_stmt_insert_ship, 4, sh->region->id);
-        if (err != SQLITE_OK) goto db_write_ship_fail;
+
+    if (s->name) {
+        err = sqlite3_bind_text(g_stmt_insert_ship, 4, s->name, -1, SQLITE_STATIC);
     }
     else {
         err = sqlite3_bind_null(g_stmt_insert_ship, 4);
-        if (err != SQLITE_OK) goto db_write_ship_fail;
     }
+    if (err != SQLITE_OK) goto db_write_ship_fail;
+
+    err = db_bind_json(g_stmt_insert_ship, 5, s->data);
+    if (err != SQLITE_OK) goto db_write_ship_fail;
 
     err = sqlite3_step(g_stmt_insert_ship);
-    if (err == SQLITE_DONE) {
-        return SQLITE_OK;
-    }
+    if (err != SQLITE_DONE) goto db_write_ship_fail;
+    err = sqlite3_reset(g_stmt_insert_ship);
+    if (err != SQLITE_OK) goto db_write_ship_fail;
+
+    return SQLITE_OK;
+
 db_write_ship_fail:
-    err = DB_LOG_ERROR(db);
+    return DB_LOG_ERROR(db);
 }
 
 int db_write_building(struct sqlite3 *db, const struct building *b) {
+/*
+        "INSERT OR REPLACE INTO `buildings` "
+        "(`id`, `region_id`, `type`, `name`, `data`) "
+*/
     int err;
-    assert(b);
-    err = sqlite3_reset(g_stmt_insert_building);
-    if (err != SQLITE_OK) goto db_write_building_fail;
+
     err = sqlite3_bind_int(g_stmt_insert_building, 1, b->id);
     if (err != SQLITE_OK) goto db_write_building_fail;
-    err = db_bind_json(g_stmt_insert_building, 2, b->data);
+    /* caller must bind region_id */
+    err = sqlite3_bind_int(g_stmt_insert_building, 3, b->type);
     if (err != SQLITE_OK) goto db_write_building_fail;
-    err = sqlite3_bind_text(g_stmt_insert_building, 3, b->name, -1, SQLITE_STATIC);
-    if (err != SQLITE_OK) goto db_write_building_fail;
-    if (b->region) {
-        err = sqlite3_bind_int(g_stmt_insert_building, 4, b->region->id);
-        if (err != SQLITE_OK) goto db_write_building_fail;
+
+    if (b->name) {
+        err = sqlite3_bind_text(g_stmt_insert_building, 4, b->name, -1, SQLITE_STATIC);
     }
     else {
         err = sqlite3_bind_null(g_stmt_insert_building, 4);
-        if (err != SQLITE_OK) goto db_write_building_fail;
     }
+    if (err != SQLITE_OK) goto db_write_building_fail;
+
+    err = db_bind_json(g_stmt_insert_building, 5, b->data);
+    if (err != SQLITE_OK) goto db_write_building_fail;
 
     err = sqlite3_step(g_stmt_insert_building);
-    if (err == SQLITE_DONE) {
-        return SQLITE_OK;
-    }
+    if (err != SQLITE_DONE) goto db_write_building_fail;
+    err = sqlite3_reset(g_stmt_insert_building);
+    if (err != SQLITE_OK) goto db_write_building_fail;
+
+    return SQLITE_OK;
+
 db_write_building_fail:
-    err = DB_LOG_ERROR(db);
+    return DB_LOG_ERROR(db);
 }
-*/
 
 int db_write_region(struct sqlite3 *db, const struct region *r) {
     // INSERT INTO `region` (`id`, `data`, `x`, `y`, `p`, `turn`, `name`, `terrain`) VALUES (?,?,?,?,?,?,?,?)
@@ -556,9 +626,44 @@ int db_write_region(struct sqlite3 *db, const struct region *r) {
     err = sqlite3_step(g_stmt_insert_region);
     if (err != SQLITE_DONE) goto db_write_region_fail;
 
-    if (r->messages) {
-        return db_write_messages(db, r->messages, r->id, g_stmt_insert_region_message);
+    if (r->units) {
+        int i, len;
+        err = sqlite3_bind_int(g_stmt_insert_unit, 2, r->id);
+        if (err != SQLITE_OK) goto db_write_region_fail;
+        for (i = 0, len = stbds_arrlen(r->units); i != len; ++i) {
+            err = db_write_unit(db, r->units[i]);
+            if (err != SQLITE_OK) return err;
+        }
+        err = sqlite3_clear_bindings(g_stmt_insert_unit);
+        if (err != SQLITE_OK) goto db_write_region_fail;
     }
+    if (r->ships) {
+        int i, len;
+        err = sqlite3_bind_int(g_stmt_insert_ship, 2, r->id);
+        if (err != SQLITE_OK) goto db_write_region_fail;
+        for (i = 0, len = stbds_arrlen(r->ships); i != len; ++i) {
+            err = db_write_ship(db, r->ships[i]);
+            if (err != SQLITE_OK) return err;
+        }
+        err = sqlite3_clear_bindings(g_stmt_insert_ship);
+        if (err != SQLITE_OK) goto db_write_region_fail;
+    }
+    if (r->buildings) {
+        int i, len;
+        err = sqlite3_bind_int(g_stmt_insert_building, 2, r->id);
+        if (err != SQLITE_OK) goto db_write_region_fail;
+        for (i = 0, len = stbds_arrlen(r->buildings); i != len; ++i) {
+            err = db_write_building(db, r->buildings[i]);
+            if (err != SQLITE_OK) return err;
+        }
+        err = sqlite3_clear_bindings(g_stmt_insert_building);
+        if (err != SQLITE_OK) goto db_write_region_fail;
+    }
+    if (r->messages) {
+        err = db_write_messages(db, r->messages, r->id, g_stmt_insert_region_message);
+        if (err != SQLITE_OK) return err;
+    }
+
     return SQLITE_OK;
 
 db_write_region_fail:
@@ -798,6 +903,8 @@ int db_read_info(struct sqlite3 *db, struct gamedata *gd)
     int err;
     err = db_read_config(db, g_stmt_select_all_terrains, &gd->terrains);
     if (err != SQLITE_OK) return err;
+    err = db_read_config(db, g_stmt_select_all_races, &gd->races);
+    if (err != SQLITE_OK) return err;
     err = db_read_config(db, g_stmt_select_all_building_types, 
         &gd->building_types);
     if (err != SQLITE_OK) return err;
@@ -811,6 +918,8 @@ int db_write_info(struct sqlite3 *db, const struct gamedata *gd)
 {
     int err;
     err = db_write_config(db, g_stmt_insert_terrain, &gd->terrains);
+    if (err != SQLITE_OK) return err;
+    err = db_write_config(db, g_stmt_insert_race, &gd->races);
     if (err != SQLITE_OK) return err;
     err = db_write_config(db, g_stmt_insert_building_type, &gd->building_types);
     if (err != SQLITE_OK) return err;
