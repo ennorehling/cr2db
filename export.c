@@ -15,7 +15,7 @@
 
 #include <assert.h>
 
-#define CR_VERSION 67
+#define CR_VERSION 70
 
 static void json_to_cr(cJSON *json, FILE *F);
 

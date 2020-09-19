@@ -251,11 +251,12 @@ void gd_update_region(struct gamedata *gd, struct region *r, struct cJSON *data)
                     }
                     if (strcmp(child->string, "Terrain") == 0) {
                         const char *name = child->valuestring;
-                        r->terrain = config_find(&gd->terrains, name);
-                        if (r->terrain < 0) {
+                        index_t index = config_find(&gd->terrains, name);
+                        if (index < 0) {
                             /* special terrain, not in the config or database */
-                            r->terrain = config_add(&gd->terrains, name);
+                            index = config_add(&gd->terrains, name);
                         }
+                        r->terrain = (terrain_id) index;
                     }
                 }
             }
