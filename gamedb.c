@@ -136,6 +136,21 @@ static int db_prepare(sqlite3 *db) {
     if (err != SQLITE_OK) goto db_prepare_fail;
 
     err = sqlite3_prepare_v2(db,
+        "INSERT OR REPLACE INTO `regions` "
+        "(`id`, `data`, `x`, `y`, `z`, `name`, `terrain_id`) "
+        "VALUES (?,?,?,?,?,?,?)", -1, &g_stmt_insert_region, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+    err = sqlite3_prepare_v2(db,
+        "SELECT `data`, `id`, `terrain_id`, `name` "
+        "FROM `regions` WHERE `x` = ? AND `y` = ? AND `z` = ?", -1,
+        &g_stmt_select_region, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+    err = sqlite3_prepare_v2(db,
+        "SELECT `id`, `x`,  `y`, `z`, `name`, `terrain_id` FROM `regions`", -1,
+        &g_stmt_select_all_regions_meta, NULL);
+    if (err != SQLITE_OK) goto db_prepare_fail;
+
+    err = sqlite3_prepare_v2(db,
         "INSERT OR REPLACE INTO `buildings` "
         "(`id`, `region_id`, `type`, `name`, `data`) "
         "VALUES (?,?,?,?,?)", -1, &g_stmt_insert_building, NULL);
@@ -165,20 +180,6 @@ static int db_prepare(sqlite3 *db) {
         "FROM `units` WHERE `id` = ?", -1, &g_stmt_select_unit, NULL);
     if (err != SQLITE_OK) goto db_prepare_fail;
 
-    err = sqlite3_prepare_v2(db,
-        "INSERT OR REPLACE INTO `regions` "
-        "(`id`, `data`, `x`, `y`, `z`, `name`, `terrain_id`) "
-        "VALUES (?,?,?,?,?,?,?)", -1, &g_stmt_insert_region, NULL);
-    if (err != SQLITE_OK) goto db_prepare_fail;
-    err = sqlite3_prepare_v2(db,
-        "SELECT `data`, `id`, `terrain_id`, `name` "
-        "FROM `regions` WHERE `x` = ? AND `y` = ? AND `z` = ?", -1,
-        &g_stmt_select_region, NULL);
-    if (err != SQLITE_OK) goto db_prepare_fail;
-    err = sqlite3_prepare_v2(db,
-        "SELECT `id`, `x`,  `y`, `z`, `name`, `terrain_id` FROM `regions`", -1,
-        &g_stmt_select_all_regions_meta, NULL);
-    if (err != SQLITE_OK) goto db_prepare_fail;
     return err;
 
 db_prepare_fail:
@@ -434,46 +435,50 @@ int db_close(sqlite3 * db) {
     g_stmt_insert_message = NULL;
     err = sqlite3_finalize(g_stmt_insert_region_message);
     g_stmt_insert_region_message = NULL;
-    err = sqlite3_finalize(g_stmt_insert_battle);
-    g_stmt_insert_battle = NULL;
     err = sqlite3_finalize(g_stmt_insert_faction_message);
     g_stmt_insert_faction_message = NULL;
-
-    err = sqlite3_finalize(g_stmt_select_all_races);
-    g_stmt_select_all_races = NULL;
+    err = sqlite3_finalize(g_stmt_insert_battle);
+    g_stmt_insert_battle = NULL;
     err = sqlite3_finalize(g_stmt_select_all_terrains);
     g_stmt_select_all_terrains = NULL;
-    err = sqlite3_finalize(g_stmt_select_all_ship_types);
-    g_stmt_select_all_ship_types = NULL;
-    err = sqlite3_finalize(g_stmt_select_all_building_types);
-    g_stmt_select_all_building_types = NULL;
-    err = sqlite3_finalize(g_stmt_insert_race);
-    g_stmt_insert_race = NULL;
     err = sqlite3_finalize(g_stmt_insert_terrain);
     g_stmt_insert_terrain = NULL;
+    err = sqlite3_finalize(g_stmt_select_all_races);
+    g_stmt_select_all_races = NULL;
+    err = sqlite3_finalize(g_stmt_insert_race);
+    g_stmt_insert_race = NULL;
+    err = sqlite3_finalize(g_stmt_select_all_ship_types);
+    g_stmt_select_all_ship_types = NULL;
     err = sqlite3_finalize(g_stmt_insert_ship_type);
     g_stmt_insert_ship_type = NULL;
+    err = sqlite3_finalize(g_stmt_select_all_building_types);
+    g_stmt_select_all_building_types = NULL;
     err = sqlite3_finalize(g_stmt_insert_building_type);
     g_stmt_insert_building_type = NULL;
-
-    err = sqlite3_finalize(g_stmt_select_all_factions_meta);
-    g_stmt_select_all_factions_meta = NULL;
-    err = sqlite3_finalize(g_stmt_select_all_regions_meta);
-    g_stmt_select_all_regions_meta = NULL;
-    err = sqlite3_finalize(g_stmt_select_faction);
-    g_stmt_select_faction = NULL;
     err = sqlite3_finalize(g_stmt_insert_faction);
     g_stmt_insert_faction = NULL;
+    err = sqlite3_finalize(g_stmt_select_faction);
+    g_stmt_select_faction = NULL;
+    err = sqlite3_finalize(g_stmt_select_all_factions_meta);
+    g_stmt_select_all_factions_meta = NULL;
     err = sqlite3_finalize(g_stmt_insert_region);
     g_stmt_insert_region = NULL;
     err = sqlite3_finalize(g_stmt_select_region);
     g_stmt_select_region = NULL;
-    err = sqlite3_finalize(g_stmt_insert_unit);
-    g_stmt_insert_unit = NULL;
-    err = sqlite3_finalize(g_stmt_insert_ship);
-    g_stmt_insert_ship = NULL;
+    err = sqlite3_finalize(g_stmt_select_all_regions_meta);
+    g_stmt_select_all_regions_meta = NULL;
     err = sqlite3_finalize(g_stmt_insert_building);
     g_stmt_insert_building = NULL;
+    err = sqlite3_finalize(g_stmt_select_building);
+    g_stmt_select_building = NULL;
+    err = sqlite3_finalize(g_stmt_insert_ship);
+    g_stmt_insert_ship = NULL;
+    err = sqlite3_finalize(g_stmt_select_ship);
+    g_stmt_select_ship = NULL;
+    err = sqlite3_finalize(g_stmt_insert_unit);
+    g_stmt_insert_unit = NULL;
+    err = sqlite3_finalize(g_stmt_select_unit);
+    g_stmt_select_unit = NULL;
 
     err = sqlite3_close(db);
     return err;
